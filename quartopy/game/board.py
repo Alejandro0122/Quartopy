@@ -23,7 +23,7 @@ class Board:
             for h in Hole:
                 for sh in Shape:
                     for si in Size:
-                        self.board[row][col] = Piece(row, col, c, sh, si, h)
+                        self.board[row][col] = Piece(row, col, si, c, sh, h)
                         col += 1
             row += 1
 

@@ -68,7 +68,7 @@ class Piece:
     def copy(self):
         """Crea una copia de la pieza"""
         return Piece(
-            self.row, self.col, self.coloration, self.shape, self.size, self.hole
+            self.row, self.col, self.size, self.coloration, self.shape, self.hole
         )
 
     # ####################################################################
