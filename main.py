@@ -3,8 +3,7 @@ import time
 import os
 
 
-from .game.quarto_game import QuartoGame
-from .utils.display import display_boards
+from quartopy import QuartoGame
 from colorama import Fore, Back, Style
 import os
 

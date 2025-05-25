@@ -1,2 +1,2 @@
-from .main import play_quarto
-from .game import quarto_game
+from .game.quarto_game import QuartoGame
+from .models.board import Board, Piece, Coloration, Shape, Size, Hole
