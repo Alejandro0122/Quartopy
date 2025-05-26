@@ -1,0 +1,26 @@
+[project]
+name = "quartopy"
+version = "0.1.0"
+description = "Juego Quarto con CLI y bots"
+authors = [
+    { name="Jonathan Zea" },
+    { name="David Guachamin" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "click",
+    "colorama",
+    "numpy"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["quartopy*", "bot*", "quarto_CLI*"]
+
+[project.scripts]
+quarto-cli = "quarto_CLI:play_quarto"
+
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
