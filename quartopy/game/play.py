@@ -7,7 +7,10 @@ import os
 from colorama import Fore, Back, Style
 from os import path
 
-builtin_bot_folder = "bot/"
+builtin_bot_folder = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../bot/")
+)
+print(f"Directorio de bots integrado: {builtin_bot_folder}")
 
 
 def go_quarto(
