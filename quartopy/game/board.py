@@ -248,3 +248,18 @@ class Board:
 
         # Borde inferior
         print("  ╚" + "╩".join(["══════"] * self.cols) + "╝")
+
+    # ####################################################################
+    def encode(self):
+        """Convierte el tablero en una matriz (1-16-4-4)
+        ## Return
+        ``matrix``: np.array (1, 16, 4, 4) con one-hot encoded de las piezas del tablero.
+
+        """
+        matrix = np.zeros((1, 16, self.rows, self.cols), dtype=float)
+        for r in range(self.rows):
+            for c in range(self.cols):
+                piece = self.board[r][c]
+                if isinstance(piece, Piece):
+                    matrix[0, :, r, c] = piece.vectorize_onehot()
+        return matrix
