@@ -8,8 +8,8 @@ class Size(Enum):
 
 
 class Coloration(Enum):
-    BEIGE = "BEIGE"
-    BROWN = "BROWN"
+    BLACK = "BLACK"
+    WHITE = "WHITE"
 
 
 class Shape(Enum):
@@ -23,7 +23,7 @@ class Hole(Enum):
 
 
 class Piece:
-    def __init__(self, row, col, size, coloration, shape, hole):
+    def __init__(self, size, coloration, shape, hole):
         if not isinstance(size, Size):
             raise ValueError("size must be a Size enum")
         if not isinstance(coloration, Coloration):
@@ -33,8 +33,6 @@ class Piece:
         if not isinstance(hole, Hole):
             raise ValueError("hole must be a Hole enum")
 
-        self.row = row
-        self.col = col
         self.coloration = coloration
         self.shape = shape
         self.size = size
@@ -44,7 +42,7 @@ class Piece:
         if verbose:
             return f"{self.size.value}, {self.coloration.value}, {self.shape.value}, {self.hole.value}"
         else:
-            return f"{'T' if self.size == Size.TALL else 'S'}{'B' if self.coloration == Coloration.BEIGE else 'D'}{'C' if self.shape == Shape.CIRCLE else 'Q'}{'H' if self.hole == Hole.WITH else 'N'}"
+            return f"{'T' if self.size == Size.TALL else 'L'}{'K' if self.coloration == Coloration.BLACK else 'W'}{'R' if self.shape == Shape.CIRCLE else 'Q'}{'H' if self.hole == Hole.WITH else 'N'}"
 
     # ####################################################################
     def vectorize(self) -> np.ndarray:
@@ -59,7 +57,7 @@ class Piece:
         """
         v = [
             1 if self.size == Size.TALL else 0,
-            1 if self.coloration == Coloration.BROWN else 0,
+            1 if self.coloration == Coloration.WHITE else 0,
             1 if self.shape == Shape.SQUARE else 0,
             1 if self.hole == Hole.WITH else 0,
         ]
@@ -67,9 +65,7 @@ class Piece:
 
     def copy(self):
         """Crea una copia de la pieza"""
-        return Piece(
-            self.row, self.col, self.size, self.coloration, self.shape, self.hole
-        )
+        return Piece(self.size, self.coloration, self.shape, self.hole)
 
     # ####################################################################
     def vectorize_onehot(self) -> np.ndarray:
@@ -83,7 +79,7 @@ class Piece:
         print(vector.shape)
         vector[
             int(self.size == Size.TALL),
-            int(self.coloration == Coloration.BROWN),
+            int(self.coloration == Coloration.WHITE),
             int(self.shape == Shape.SQUARE),
             int(self.hole == Hole.WITH),
         ] = 1.0
@@ -91,14 +87,25 @@ class Piece:
         vector = vector.flatten()
         return vector
 
+    def __eq__(self, other):
+        """Compara dos piezas para ver si son iguales.
+        Ignora las coordenadas (row, col) de la pieza."""
+        if isinstance(other, int):
+            return False
+        return (
+            self.size == other.size
+            and self.coloration == other.coloration
+            and self.shape == other.shape
+            and self.hole == other.hole
+        )
+
     # ####################################################################
     @classmethod
-    def from_onehot(cls, vector: np.ndarray, rc: np.ndarray | list[int]) -> "Piece":
+    def from_onehot(cls, vector: np.ndarray) -> "Piece":
         """Convierte un vector one-hot encoded en una pieza.
         ## Parameters
 
         ``vector``: np.array (16, )
-        ``rc``: np.array (2, )
 
         ## Return
         ``piece``: Piece
@@ -110,18 +117,15 @@ class Piece:
         if not np.sum(vector) == 1:
             raise ValueError("vector must be one-hot encoded")
 
-        if len(rc) != 2:
-            raise ValueError("rc must be of shape (2,)")
-
         vector = vector.reshape((2, 2, 2, 2))
 
         coords = np.argwhere(vector == 1)[0]
         size = Size.LITTLE if coords[0] == 0 else Size.TALL
-        coloration = Coloration.BEIGE if coords[1] == 0 else Coloration.BROWN
+        coloration = Coloration.BLACK if coords[1] == 0 else Coloration.WHITE
         shape = Shape.CIRCLE if coords[2] == 0 else Shape.SQUARE
         hole = Hole.WITHOUT if coords[3] == 0 else Hole.WITH
 
-        piece = cls(rc[0], rc[1], size, coloration, shape, hole)
+        piece = cls(size, coloration, shape, hole)
         return piece
 
     @classmethod
@@ -143,5 +147,5 @@ class Piece:
         vector = np.zeros((16,), dtype=float)
         vector[piece_idx] = 1.0
         # Convertir el vector one-hot encoded en una pieza
-        piece = cls.from_onehot(vector, [rc_idx // 4, rc_idx % 4])
+        piece = cls.from_onehot(vector)
         return piece

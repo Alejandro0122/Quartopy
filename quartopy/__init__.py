@@ -1,3 +1,4 @@
 from .game.quarto_game import QuartoGame
-
-# from .game.board import Board, Piece, Coloration, Shape, Size, Hole
+from .models.Bot import BotAI
+from .utils.logger import logger
+from .game.piece import Piece

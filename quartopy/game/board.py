@@ -1,66 +1,80 @@
 from .piece import Piece
 from .piece import Coloration, Shape, Size, Hole
+
 import numpy as np
+from colorama import Fore, Style, Back
 
 
 class Board:
-    def __init__(self, name, storage, rows, cols):
+    def __init__(self, name: str, storage: bool, rows, cols):
         self.name = name
-        self.storage = storage
+        self.storage = storage  # Cuando True crea un board con las piezas disponibles
         self.board: list[list[Piece | int]] = [
             [0 for _ in range(cols)] for _ in range(rows)
         ]
-        self.rows = rows
-        self.cols = cols
+        self.rows: int = rows
+        self.cols: int = cols
 
         if self.storage:
             self.__init_pieces()
 
     def __init_pieces(self):
+        """Crea un board con todas las piezas posibles"""
         row = 0
-        for c in Coloration:
+        for si in Size:
             col = 0
-            for h in Hole:
+            for c in Coloration:
                 for sh in Shape:
-                    for si in Size:
-                        self.board[row][col] = Piece(row, col, si, c, sh, h)
+                    for h in Hole:
+                        self.board[row][col] = Piece(si, c, sh, h)
                         col += 1
             row += 1
 
-    def get_piece(self, row, col) -> Piece | int:
+    def get_piece(self, row, col) -> Piece:
+        """Retorna la pieza en la posición (row, col) del tablero.
+        Se asume que la posición es válida.
+        Debe retornar Piece"""
+        assert isinstance(
+            self.board[row][col], Piece
+        ), "No se puede hacer get_piece en una posición vacía"
         return self.board[row][col]
 
-    def put_piece(self, piece, row, col):
+    def is_empty(self, row: int, col: int) -> bool:
+        """Retorna True si la posición (row, col) está vacía (0)"""
+        return self.board[row][col] == 0
+
+    def find_piece(self, piece: Piece) -> tuple[int, int] | None:
+        """Busca una pieza en el tablero y retorna su posición (row, col)
+        Si no la encuentra, retorna None"""
+        if isinstance(piece, Piece):
+            for row in range(self.rows):
+                for col in range(self.cols):
+                    if self.board[row][col] == piece:
+                        return row, col
+            return None
+        else:
+            raise ValueError("El item debe ser una pieza")
+
+    def remove_piece(self, row: int, col: int):
+        """Elimina una pieza del tablero.
+        Solo es válido cuando ``storage`` = True"""
+        assert (
+            self.storage
+        ), "Solo se puede eliminar piezas de un tablero de tipo storage"
+
+        assert isinstance(self.board[row][col], Piece), "El item debe ser una pieza"
+
+        self.board[row][col] = 0
+
+    def put_piece(self, piece: Piece | int, row, col):
         # Solo asignar si es una Pieza o 0 (vacío)
-        if isinstance(piece, Piece) or piece == 0:
+        if isinstance(piece, Piece):  # or piece == 0:
             self.board[row][col] = piece
-            if piece != 0:
-                piece.row = row
-                piece.col = col
         else:
             raise ValueError("Solo se pueden colocar objetos Piece o 0 (vacío)")
 
-    def copy(self):
-        """Crea una copia profunda del tablero"""
-        new_board = Board(self.name, False, self.rows, self.cols)
-        for row in range(self.rows):
-            for col in range(self.cols):
-                piece = self.get_piece(row, col)
-                if isinstance(piece, Piece):
-                    new_board.put_piece(piece.copy(), row, col)
-                else:
-                    new_board.put_piece(0, row, col)
-        return new_board
-
-    def move_to_gameboard(self, game_board, piece, row, col):
-        try:
-            self.board[piece.row][piece.col] = 0
-            game_board.put_piece(piece, row, col)
-            return piece
-        except AttributeError:
-            print("Tipo no válido.")
-
-    def winner(self):
+    def check_win(self):
+        """Retorna True si hay un ganador, False en caso contrario"""
         if self.__check_all_lines():
             return True
         return False
@@ -115,15 +129,17 @@ class Board:
         return False
 
     def get_valid_moves(self):
-        moves = []
+        moves: list[tuple[int, int]] = []
         for row in range(self.rows):
             for col in range(self.cols):
-                piece = self.get_piece(row, col)
-                if not self.storage:
-                    if piece == 0:
+                piece = self.board[row][col]
+                if self.storage:
+                    if piece != 0:
+                        # Piezas que están en storage
                         moves.append((row, col))
                 else:
-                    if piece != 0:
+                    if piece == 0:
+                        # Espacios vacíos
                         moves.append((row, col))
         return moves
 
@@ -149,7 +165,7 @@ class Board:
         B = np.zeros((1, 4, self.rows, self.cols))
         for r in range(self.rows):
             for c in range(self.cols):
-                piece = self.get_piece(r, c)
+                piece = self.board[r][c]
 
                 if isinstance(piece, Piece):
                     B[:, :, r, c] = piece.vectorize()
@@ -157,6 +173,18 @@ class Board:
                 # continue
 
         return B
+
+    # ##############################################################
+    def __contains__(self, item: Piece):
+        """Retorna True si el item es una pieza del tablero"""
+        if isinstance(item, Piece):
+            for row in range(self.rows):
+                for col in range(self.cols):
+                    if self.board[row][col] == item:
+                        return True
+            return False
+        else:
+            raise ValueError("El item debe ser una pieza")
 
     @staticmethod
     # ##############################################################
@@ -170,3 +198,38 @@ class Board:
         for i, board in enumerate(boards):
             B[i, :, :, :] = board.to_matrix()
         return B
+
+    def print_board(self, piece_highlight: Piece | int = 0):
+        """Método auxiliar para imprimir un tablero con formato"""
+
+        # Encabezado de columnas
+        print("    " + "      ".join(str(i) for i in range(self.cols)))
+
+        # Borde superior
+        print("  ╔" + "╦".join(["══════"] * self.cols) + "╗")
+
+        for row in range(self.rows):
+            # Contenido de la fila
+            row_str = f"{row} ║"
+            for col in range(self.cols):
+                piece = self.board[row][col]
+                if isinstance(piece, Piece):
+                    if piece == piece_highlight:
+                        # Resaltar la pieza seleccionada
+                        back = Back.YELLOW
+                    else:
+                        back = Back.RESET
+                    color = (
+                        Fore.RED if piece.coloration == Coloration.BLACK else Fore.BLUE
+                    )
+                    row_str += f" {back}{color}{piece}{Style.RESET_ALL} ║"
+                else:
+                    row_str += "      ║"
+            print(row_str)
+
+            # Borde entre filas
+            if row < self.rows - 1:
+                print("  ╠" + "╬".join(["══════"] * self.cols) + "╣")
+
+        # Borde inferior
+        print("  ╚" + "╩".join(["══════"] * self.cols) + "╝")
