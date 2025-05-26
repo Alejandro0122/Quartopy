@@ -128,6 +128,21 @@ class Board:
                     return True
         return False
 
+    def get_valid_pieces(self):
+        moves: list[Piece] = []
+        for row in range(self.rows):
+            for col in range(self.cols):
+                piece = self.board[row][col]
+                if self.storage:
+                    if piece != 0:
+                        # Piezas que están en storage
+                        moves.append(piece)  # type: ignore
+                else:
+                    if piece == 0:
+                        # Espacios vacíos
+                        pass
+        return moves
+
     def get_valid_moves(self):
         moves: list[tuple[int, int]] = []
         for row in range(self.rows):

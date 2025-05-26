@@ -7,6 +7,8 @@ import os
 from colorama import Fore, Back, Style
 from os import path
 
+builtin_bot_folder = "bot/"
+
 
 def go_quarto(
     matches: int,
@@ -15,6 +17,7 @@ def go_quarto(
     delay: float = 0,
     verbose: bool = True,
     folder_bots: str = "bot/",
+    builtin_bots: bool = False,
 ):
     """Inicia un torneo de Quarto entre dos bots.
     Args:
@@ -24,6 +27,7 @@ def go_quarto(
         delay (float): Retardo entre movimientos en segundos.
         verbose (bool): Si True, muestra salida detallada de las partidas.
         folder_bots (str): Directorio donde se encuentran los scripts de los bots, default "bot/".
+        builtin_bots (bool): Si True, usa bots integrados en lugar de scripts externos.
     """
 
     print(
@@ -32,7 +36,13 @@ def go_quarto(
     logger.info(
         f"Iniciando torneo de Quarto con {matches} partidas entre {player1_file} y {player2_file}"
     )
-
+    if builtin_bots:
+        logger.info(f"Usando bots integrados: {player1_file} y {player2_file}")
+        folder_bots = builtin_bot_folder
+    else:
+        logger.info(
+            f"Usando bots desde scripts: {player1_file} y {player2_file} en la carpeta {folder_bots}"
+        )
     # Cargar clases de los bots
     player1_class = load_bot_class(path.join(folder_bots, f"{player1_file}.py"))
     player2_class = load_bot_class(path.join(folder_bots, f"{player2_file}.py"))
@@ -71,7 +81,7 @@ def go_quarto(
         # Mostrar resultado de la partida
         if game.player_won:
             winner = game.winner_name
-            if "Player 1" in winner:
+            if game.winner_pos == "Player 1":
                 results[f"{player1.name} (P1)"] += 1
             else:
                 results[f"{player2.name} (P2)"] += 1
@@ -89,7 +99,6 @@ def go_quarto(
 
         if match < matches:
             print(f"\n{Fore.CYAN}Preparando siguiente partida...{Style.RESET_ALL}")
-            time.sleep(2)
 
     # Resumen final
     print(f"\n{Back.BLUE}{Fore.WHITE}{' RESULTADOS FINALES ':=^60}{Style.RESET_ALL}")

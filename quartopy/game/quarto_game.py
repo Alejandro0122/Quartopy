@@ -2,9 +2,11 @@ from .board import Board
 from ..models.Bot import BotAI
 from .piece import Piece
 from ..utils.logger import logger
-from ..utils.file_io import export_history_to_csv
 
 from colorama import Fore, Back, Style
+from os import path, makedirs
+from datetime import datetime
+import csv
 
 logger.debug(f"{__name__} importado correctamente")
 
@@ -162,9 +164,62 @@ class QuartoGame:
             )
 
     def export_history_to_csv(self, match_number=None):
-        """Exporta el historial a CSV"""
+        """Exporta el historial a un CSV con nombre que incluye match, fecha y hora"""
+        # Crear directorio si no existe
+        if not path.exists("partidas_guardadas"):
+            makedirs("partidas_guardadas")
 
-        return export_history_to_csv(self, match_number)
+        # Generar nombre de archivo con formato: MatchX_YYYY-MM-DD_HH-MM-SS.csv
+        current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        if match_number is None:
+            match_number = 1
+        filename = f"{current_time}_match{match_number:03d}.csv"
+
+        filepath = path.join("partidas_guardadas", filename)
+
+        with open(filepath, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            # Escribir metadatos al inicio del archivo
+            writer.writerow(["Juego: Quarto"])
+            writer.writerow(
+                [f"Partida: {match_number}" if match_number else "Partida única"]
+            )
+            writer.writerow([f"Fecha: {current_time.replace('_', ' ')}"])
+            writer.writerow([f"Jugador 1: {self.player1.name}"])
+            writer.writerow([f"Jugador 2: {self.player2.name}"])
+            writer.writerow(
+                [
+                    f"Resultado: {self.winner_name if self.winner_name else 'Sin determinar'}"
+                ]
+            )
+            writer.writerow(
+                [
+                    f"Posición: {self.player_turn if self.winner_name else 'Sin determinar'}"
+                ]
+            )
+            writer.writerow([])  # Línea vacía
+
+            # Escribir cabecera de movimientos
+            writer.writerow(["Movimiento", "Jugador", "Acción", "Pieza", "Posición"])
+
+            # Escribir movimientos
+            for i, move in enumerate(self.move_history, start=1):
+                writer.writerow(
+                    [
+                        i,
+                        move["player"],
+                        move["action"],
+                        move["piece"],
+                        (
+                            f"({move['position'][0]}, {move['position'][1]})"
+                            if move["position"]
+                            else "N/A"
+                        ),
+                    ]
+                )
+
+        print(f"\n{Fore.GREEN}Historial guardado en: {filepath}{Style.RESET_ALL}")
+        return filepath
 
     def display_boards(self, exclude_footer: bool = False):
         """Muestra ambos tableros con formato mejorado"""

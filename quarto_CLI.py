@@ -11,7 +11,7 @@ logger.debug(f"{__name__} importado correctamente")
 @click.option(
     "--player1",
     default="random_bot",
-    type=click.Choice(["random_bot"], case_sensitive=False),
+    type=click.Choice(["random_bot", "human"], case_sensitive=False),
     help="nombre del script del jugador 1 (ej. random_bot)",
 )
 @click.option(
@@ -34,6 +34,7 @@ def play_quarto(matches, player1, player2, delay, verbose, folder_bots):
         delay=delay,
         verbose=verbose,
         folder_bots=folder_bots,
+        builtin_bots=True,
     )
 
 
