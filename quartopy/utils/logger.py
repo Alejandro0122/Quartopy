@@ -15,7 +15,7 @@ from datetime import datetime
 
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="[%(asctime)s][%(levelname)s] %(message)s",
     stream=stdout,
     datefmt="%m-%d %H:%M:%S",

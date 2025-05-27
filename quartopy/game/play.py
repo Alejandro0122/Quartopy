@@ -70,7 +70,9 @@ def go_quarto(
 
         game = QuartoGame(player1=player1, player2=player2)
 
+        _move_count = 0
         while not game.player_won and not game.game_board.is_full():
+            _move_count += 1
             if verbose:
                 game.display_boards()
             game.play_turn()

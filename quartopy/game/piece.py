@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+from torch import Tensor
 
 
 class Size(Enum):
@@ -76,14 +77,12 @@ class Piece:
         ``vector``: np.array (16, )
         """
         vector = np.zeros((2, 2, 2, 2), dtype=float)
-        print(vector.shape)
         vector[
             int(self.size == Size.TALL),
             int(self.coloration == Coloration.WHITE),
             int(self.shape == Shape.SQUARE),
             int(self.hole == Hole.WITH),
         ] = 1.0
-        print(vector)
         vector = vector.flatten()
         return vector
 
@@ -101,7 +100,7 @@ class Piece:
 
     # ####################################################################
     @classmethod
-    def from_onehot(cls, vector: np.ndarray) -> "Piece":
+    def from_onehot(cls, vector: np.ndarray | Tensor) -> "Piece":
         """Convierte un vector one-hot encoded en una pieza.
         ## Parameters
 
@@ -130,7 +129,7 @@ class Piece:
 
     @classmethod
     # ####################################################################
-    def from_index(cls, piece_idx: int, rc_idx: int) -> "Piece":
+    def from_index(cls, piece_idx: int) -> "Piece":
         """Convierte un índice de pieza en una pieza.
         ## Parameters
         ``piece_idx``: int [0, 15]
@@ -141,8 +140,7 @@ class Piece:
         """
         if piece_idx < 0 or piece_idx > 15:
             raise ValueError("piece_idx must be between 0 and 15")
-        if rc_idx < 0 or rc_idx > 15:
-            raise ValueError("rc_idx must be between 0 and 15")
+
         # Convertir el índice de pieza en un vector one-hot encoded
         vector = np.zeros((16,), dtype=float)
         vector[piece_idx] = 1.0

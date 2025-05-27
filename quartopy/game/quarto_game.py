@@ -14,7 +14,7 @@ logger.debug(f"{__name__} importado correctamente")
 class QuartoGame:
 
     def __init__(self, player1: BotAI, player2: BotAI):
-        self.MAX_TRIES = 5
+        self.MAX_TRIES = 256  # todos los intentos posibles
         self.TIE = "Tie"
 
         self.selected_piece: Piece | int = 0
@@ -59,6 +59,9 @@ class QuartoGame:
                     _r_storage, _c_storage = coord  # en storage_board
                     valid_selection = True
                     break
+                logger.info(
+                    f"Intento {n_tries + 1}: Seleccionando pieza {selected_piece}"
+                )
 
             if not valid_selection:
                 raise ValueError(f"Invalid selection after {self.MAX_TRIES} tries")
@@ -98,9 +101,7 @@ class QuartoGame:
                 if self.game_board.is_empty(row, col):
                     valid_placement = True
                     break
-                logger.debug(
-                    f"Intento {n_tries + 1}: Colocando pieza en ({row}, {col})"
-                )
+                logger.info(f"Intento {n_tries + 1}: Colocando pieza en ({row}, {col})")
 
             if not valid_placement:
                 raise ValueError(f"Invalid selection after {self.MAX_TRIES} tries")

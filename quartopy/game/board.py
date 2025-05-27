@@ -263,3 +263,21 @@ class Board:
                 if isinstance(piece, Piece):
                     matrix[0, :, r, c] = piece.vectorize_onehot()
         return matrix
+
+    # ####################################################################
+    def get_position_index(self, index: int) -> tuple[int, int]:
+        """Convierte un índice lineal en una posición (row, col) del tablero.
+
+        ## Parameters
+
+        ``index``: int índice lineal (0 a rows*cols-1)
+        ## Return
+
+        ``(row, col)``: tuple de enteros con la posición en el tablero.
+        """
+        if index < 0 or index >= self.rows * self.cols:
+            raise IndexError("Índice fuera de rango del tablero")
+        row = index // self.cols
+        col = index % self.cols
+
+        return (row, col)
