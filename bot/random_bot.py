@@ -19,7 +19,7 @@ class Quarto_bot(BotAI):
     def name(self) -> str:
         return "RandomBot"
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         logger.debug(f"RandomBot initialized with name: {self.name}")
 
     def select(self, game: QuartoGame, ith_option: int = 0, *args, **kwargs) -> Piece:

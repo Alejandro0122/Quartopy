@@ -1,6 +1,7 @@
 from ..utils import logger
 from ..models import load_bot_class
 from ..game.quarto_game import QuartoGame
+from ..models import BotAI
 
 import time
 import os
@@ -18,6 +19,8 @@ def go_quarto(
     player1_file: str,
     player2_file: str,
     delay: float = 0,
+    params_p1: dict = {},
+    params_p2: dict = {},
     verbose: bool = True,
     folder_bots: str = "bot/",
     builtin_bots: bool = False,
@@ -27,6 +30,8 @@ def go_quarto(
         matches (int): Número de partidas a jugar.
         player1_path (str): Nombre del script del bot jugador 1 (sin extensión py), debe tener una clase ``Quarto_bot``.
         player2_path (str): Nombre del script del bot jugador 2 (sin extensión py), debe tener una clase ``Quarto_bot``.
+        params_p1 (dict): Parámetros adicionales para el bot jugador 1.
+        params_p2 (dict): Parámetros adicionales para el bot jugador 2.
         delay (float): Retardo entre movimientos en segundos.
         verbose (bool): Si True, muestra salida detallada de las partidas.
         folder_bots (str): Directorio donde se encuentran los scripts de los bots, default "bot/".
@@ -49,17 +54,33 @@ def go_quarto(
     # Cargar clases de los bots
     player1_class = load_bot_class(path.join(folder_bots, f"{player1_file}.py"))
     player2_class = load_bot_class(path.join(folder_bots, f"{player2_file}.py"))
-    player1 = player1_class()
-    player2 = player2_class()
+    player1 = player1_class(**params_p1)
+    player2 = player2_class(**params_p2)
 
+    play_games(
+        matches=matches,
+        player1=player1,
+        player2=player2,
+        delay=delay,
+        verbose=verbose,
+    )
+
+
+def play_games(
+    matches: int,
+    player1: BotAI,
+    player2: BotAI,
+    delay: float = 0,
+    verbose: bool = True,
+    match_dir: str = "partidas_guardadas",
+):
     print(f" Partidas: {matches}")
     print(f" Jugador 1: {player1.name}")
     print(f" Jugador 2: {player2.name}")
     print(f" Retardo: {delay} segundos\n")
 
     # Crear directorio para guardar partidas si no existe
-    if not os.path.exists("partidas_guardadas"):
-        os.makedirs("partidas_guardadas")
+    os.makedirs(match_dir, exist_ok=True)
 
     results = {f"{player1.name} (P1)": 0, f"{player2.name} (P2)": 0, "Empates": 0}
 

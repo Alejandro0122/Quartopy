@@ -1,10 +1,13 @@
 import importlib.util
 import sys
 from pathlib import Path
+from .Bot import BotAI
 
 
-def load_bot_class(file_path: str | Path, class_name: str = "Quarto_bot"):
-    """Load a class from a given file path."""
+def load_bot_class(
+    file_path: str | Path, class_name: str = "Quarto_bot"
+) -> type[BotAI]:
+    """Importa la clase llamada ``class_name`` (no una instancia) desde el archivo especificado por ``file_path``."""
     file_path = Path(file_path)
     module_name = file_path.stem
 
