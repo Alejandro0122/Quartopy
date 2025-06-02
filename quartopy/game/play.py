@@ -24,6 +24,7 @@ def go_quarto(
     verbose: bool = True,
     folder_bots: str = "bot/",
     builtin_bots: bool = False,
+    match_dir: str = "./partidas_guardadas/",
 ):
     """Inicia un torneo de Quarto entre dos bots.
     Args:
@@ -36,6 +37,9 @@ def go_quarto(
         verbose (bool): Si True, muestra salida detallada de las partidas.
         folder_bots (str): Directorio donde se encuentran los scripts de los bots, default "bot/".
         builtin_bots (bool): Si True, usa bots integrados en lugar de scripts externos.
+        match_dir (str): Directorio donde se guardarán las partidas, default "./partidas_guardadas/".
+    Returns:
+        dict: Resultados del torneo con victorias de cada jugador y empates.
     """
 
     print(
@@ -57,13 +61,15 @@ def go_quarto(
     player1 = player1_class(**params_p1)
     player2 = player2_class(**params_p2)
 
-    play_games(
+    results = play_games(
         matches=matches,
         player1=player1,
         player2=player2,
         delay=delay,
         verbose=verbose,
+        match_dir=match_dir,
     )
+    return results
 
 
 def play_games(
@@ -72,17 +78,34 @@ def play_games(
     player2: BotAI,
     delay: float = 0,
     verbose: bool = True,
-    match_dir: str = "partidas_guardadas",
+    match_dir: str = "./partidas_guardadas/",
 ):
+    """Juega un torneo de Quarto entre dos jugadores.
+    Args:
+        * matches (int): Número de partidas a jugar.
+        * player1 (BotAI): Instancia del bot jugador 1.
+        * player2 (BotAI): Instancia del bot jugador 2.
+        * delay (float): Retardo entre movimientos en segundos.
+        * verbose (bool): Si True, muestra salida detallada de las partidas.
+        * match_dir (str): Directorio donde se guardarán las partidas.
+
+    Returns:
+        * match_results (list[int]): Lista con resultados de cada partida (+1 para P1, -1 para P2, 0 para empate).
+    """
     print(f" Partidas: {matches}")
     print(f" Jugador 1: {player1.name}")
     print(f" Jugador 2: {player2.name}")
     print(f" Retardo: {delay} segundos\n")
 
     # Crear directorio para guardar partidas si no existe
-    os.makedirs(match_dir, exist_ok=True)
+    output_folder = os.path.abspath(match_dir)
 
-    results = {f"{player1.name} (P1)": 0, f"{player2.name} (P2)": 0, "Empates": 0}
+    results: dict[str, int] = {
+        f"{player1.name} (P1)": 0,
+        f"{player2.name} (P2)": 0,
+        "Empates": 0,
+    }
+    match_results: list[int] = []  # +1 para P1, -1 para P2, "tie" para empate
 
     for match in range(1, matches + 1):
         print(
@@ -104,24 +127,27 @@ def play_games(
         if verbose:
             game.display_boards(exclude_footer=True)
 
-        # Mostrar resultado de la partida
+        # Exportar historial con número de match
+        saved_file = game.export_history_to_csv(output_folder, match_number=match)
+        print(f" Partida guardada como: {os.path.basename(saved_file)}")
+
+        # resultado de la partida
         if game.player_won:
             winner = game.winner_name
             if game.winner_pos == "Player 1":
                 results[f"{player1.name} (P1)"] += 1
+                match_results[saved_file] = +1
             else:
                 results[f"{player2.name} (P2)"] += 1
+                match_results = -1
 
             print(
                 f"\n{Back.GREEN}{Fore.BLACK} RESULTADO: {winner} GANA {Style.RESET_ALL}"
             )
         else:
             results["Empates"] += 1
+            match_results[saved_file] = 0
             print(f"\n{Back.YELLOW}{Fore.BLACK} RESULTADO: EMPATE {Style.RESET_ALL}")
-
-        # Exportar historial con número de match
-        saved_file = game.export_history_to_csv(match_number=match)
-        print(f" Partida guardada como: {os.path.basename(saved_file)}")
 
         if match < matches:
             print(f"\n{Fore.CYAN}Preparando siguiente partida...{Style.RESET_ALL}")
@@ -133,5 +159,7 @@ def play_games(
     for player, wins in results.items():
         print(f" {player:<15}: {wins} victorias")
     print("-" * 60)
-    print(f" Todas las partidas guardadas en: {os.path.abspath('partidas_guardadas')}")
+
+    print(f" Todas las partidas guardadas en: {output_folder}")
     print(f"{Back.BLUE}{Fore.WHITE}{'='*60}{Style.RESET_ALL}\n")
+    return match_results

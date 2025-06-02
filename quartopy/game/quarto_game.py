@@ -164,19 +164,17 @@ class QuartoGame:
                 f"{move.get('action', 'N/A'):<10} | {pieza:<40} | {pos}"
             )
 
-    def export_history_to_csv(self, match_number=None):
+    def export_history_to_csv(self, output_folder: str, match_number: int = 1):
         """Exporta el historial a un CSV con nombre que incluye match, fecha y hora"""
         # Crear directorio si no existe
-        if not path.exists("partidas_guardadas"):
-            makedirs("partidas_guardadas")
+        makedirs(output_folder, exist_ok=True)
 
         # Generar nombre de archivo con formato: MatchX_YYYY-MM-DD_HH-MM-SS.csv
         current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        if match_number is None:
-            match_number = 1
+
         filename = f"{current_time}_match{match_number:03d}.csv"
 
-        filepath = path.join("partidas_guardadas", filename)
+        filepath = path.join(output_folder, filename)
 
         with open(filepath, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
