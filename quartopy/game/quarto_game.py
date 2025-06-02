@@ -214,8 +214,8 @@ class QuartoGame:
                             else "N/A"
                         ),
                         move["position_index"],
-                        move["attempt"],
                         move["piece_index"],
+                        move["attempt"],
                         move["board"],
                     ]
                 )
