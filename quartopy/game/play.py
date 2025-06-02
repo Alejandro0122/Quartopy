@@ -105,7 +105,7 @@ def play_games(
         f"{player2.name} (P2)": 0,
         "Empates": 0,
     }
-    match_results: list[int] = []  # +1 para P1, -1 para P2, "tie" para empate
+    match_results: dict[str, int] = {}  # +1 para P1, -1 para P2, "tie" para empate
 
     for match in range(1, matches + 1):
         print(
@@ -139,7 +139,7 @@ def play_games(
                 match_results[saved_file] = +1
             else:
                 results[f"{player2.name} (P2)"] += 1
-                match_results = -1
+                match_results[saved_file] = -1
 
             print(
                 f"\n{Back.GREEN}{Fore.BLACK} RESULTADO: {winner} GANA {Style.RESET_ALL}"

@@ -14,7 +14,7 @@ logger.debug(f"{__name__} importado correctamente")
 class QuartoGame:
 
     def __init__(self, player1: BotAI, player2: BotAI):
-        self.MAX_TRIES = 256  # todos los intentos posibles
+        self.MAX_TRIES = 16  # todos los intentos posibles
         self.TIE = "Tie"
 
         self.selected_piece: Piece | int = 0
@@ -78,6 +78,10 @@ class QuartoGame:
                 "action": "selected",
                 "piece": self.selected_piece.__repr__(verbose=True),
                 "position": None,
+                "position_index": -1,
+                "attempt": n_tries + 1,
+                "piece_index": self.selected_piece.index(),
+                "board": "",
             }
             self.move_history.append(move_info)
         else:
@@ -108,13 +112,17 @@ class QuartoGame:
 
             print(f"{Fore.GREEN}Colocó la pieza en posición ({row}, {col})")
 
-            self.game_board.put_piece(self.selected_piece, row, col)
+            self.game_board.put_piece(piece, row, col)
 
             move_info = {
                 "player": current_player.name,
                 "action": "placed",
-                "piece": self.selected_piece.__repr__(verbose=True),  # type: ignore
+                "piece": piece.__repr__(verbose=False),
                 "position": (row, col),
+                "position_index": self.game_board.pos2index(row, col),
+                "attempt": n_tries + 1,
+                "piece_index": piece.index(),
+                "board": self.game_board.serialize(),
             }
             self.move_history.append(move_info)
 
@@ -178,28 +186,19 @@ class QuartoGame:
 
         with open(filepath, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            # Escribir metadatos al inicio del archivo
-            writer.writerow(["Juego: Quarto"])
-            writer.writerow(
-                [f"Partida: {match_number}" if match_number else "Partida única"]
-            )
-            writer.writerow([f"Fecha: {current_time.replace('_', ' ')}"])
-            writer.writerow([f"Jugador 1: {self.player1.name}"])
-            writer.writerow([f"Jugador 2: {self.player2.name}"])
             writer.writerow(
                 [
-                    f"Resultado: {self.winner_name if self.winner_name else 'Sin determinar'}"
+                    "Movimiento",
+                    "Jugador",
+                    "Acción",
+                    "Pieza",
+                    "Posición",
+                    "Posición Index",
+                    "Intento",
+                    "Pieza Index",
+                    "Tablero",
                 ]
             )
-            writer.writerow(
-                [
-                    f"Posición: {self.player_turn if self.winner_name else 'Sin determinar'}"
-                ]
-            )
-            writer.writerow([])  # Línea vacía
-
-            # Escribir cabecera de movimientos
-            writer.writerow(["Movimiento", "Jugador", "Acción", "Pieza", "Posición"])
 
             # Escribir movimientos
             for i, move in enumerate(self.move_history, start=1):
@@ -214,6 +213,10 @@ class QuartoGame:
                             if move["position"]
                             else "N/A"
                         ),
+                        move["position_index"],
+                        move["attempt"],
+                        move["piece_index"],
+                        move["board"],
                     ]
                 )
 

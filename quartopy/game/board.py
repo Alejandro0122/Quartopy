@@ -250,13 +250,22 @@ class Board:
         print("  ╚" + "╩".join(["══════"] * self.cols) + "╝")
 
     # ####################################################################
+    def serialize(self):
+        """Convierte el tablero en una cadena de texto serializada de cadena de bits.
+        ## Return
+        str representación booleana del tablero.
+        """
+
+        return "".join(str(int(x)) for x in self.encode().flatten())
+
+    # ####################################################################
     def encode(self):
         """Convierte el tablero en una matriz (1-16-4-4)
         ## Return
-        ``matrix``: np.array (1, 16, 4, 4) con one-hot encoded de las piezas del tablero.
+        ``matrix``: np.array (1, 16, 4, 4 con one-hot encoded de las piezas del tablero de boolean.
 
         """
-        matrix = np.zeros((1, 16, self.rows, self.cols), dtype=float)
+        matrix = np.zeros((1, 16, self.rows, self.cols), dtype=bool)
         for r in range(self.rows):
             for c in range(self.cols):
                 piece = self.board[r][c]
@@ -281,3 +290,20 @@ class Board:
         col = index % self.cols
 
         return (row, col)
+
+    # ####################################################################
+    def pos2index(self, row: int, col: int) -> int:
+        """Convierte una posición (row, col) en un índice lineal del tablero.
+        ## Parameters
+
+        ``row``: int fila del tablero
+        ``col``: int columna del tablero
+        ## Return
+
+        ``index``: int índice lineal (0 a rows*cols-1)
+        """
+        if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
+            raise IndexError("Posición fuera de rango del tablero")
+
+        index = row * self.cols + col
+        return index

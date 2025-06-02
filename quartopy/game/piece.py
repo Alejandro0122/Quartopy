@@ -69,6 +69,15 @@ class Piece:
         return Piece(self.size, self.coloration, self.shape, self.hole)
 
     # ####################################################################
+    def index(self):
+        """Convierte la pieza en un índice entre 0 y 15.
+        ## Return
+        ``index``: int [0, 15]
+        """
+        vector = self.vectorize_onehot()
+        return np.argmax(vector)
+
+    # ####################################################################
     def vectorize_onehot(self) -> np.ndarray:
         """Convierte la pieza en un vector one-hot encoded.
 
