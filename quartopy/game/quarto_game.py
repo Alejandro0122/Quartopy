@@ -192,10 +192,10 @@ class QuartoGame:
                     "Jugador",
                     "Acción",
                     "Pieza",
+                    "Pieza Index",
                     "Posición",
                     "Posición Index",
                     "Intento",
-                    "Pieza Index",
                     "Tablero",
                 ]
             )
@@ -208,13 +208,13 @@ class QuartoGame:
                         move["player"],
                         move["action"],
                         move["piece"],
+                        move["piece_index"],
                         (
                             f"({move['position'][0]}, {move['position'][1]})"
                             if move["position"]
                             else "N/A"
                         ),
                         move["position_index"],
-                        move["piece_index"],
                         move["attempt"],
                         move["board"],
                     ]
