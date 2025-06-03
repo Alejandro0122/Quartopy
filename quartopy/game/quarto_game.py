@@ -114,6 +114,22 @@ class QuartoGame:
 
             self.game_board.put_piece(piece, row, col)
 
+            # # prueba de serialización y deserialización del tablero
+            # logger.debug("Check serializing and deserializing the game board")
+            # matrix = self.game_board.encode()
+            # matrix = matrix.squeeze(0)
+            # serial = self.game_board.serialize()
+            # m2 = Board.deserialize(serial)
+            # import numpy as np
+
+            # logger.debug(matrix)
+            # logger.debug(matrix.shape)
+            # logger.debug(m2)
+            # logger.debug(m2.shape)
+            # assert np.array_equal(
+            #     m2, matrix
+            # ), "Error al serializar y deserializar el tablero"
+
             move_info = {
                 "player": current_player.name,
                 "action": "placed",

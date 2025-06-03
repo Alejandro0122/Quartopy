@@ -258,6 +258,27 @@ class Board:
 
         return "".join(str(int(x)) for x in self.encode().flatten())
 
+    @staticmethod
+    def deserialize(serialized: str, rows: int = 4, cols: int = 4):
+        """Crea una matriz del tablero (1-16-4-4) a partir de una cadena de texto serializada de cadena de bits.
+        ## Parameters
+        ``serialized``: str representación booleana del tablero.
+        ``rows``: int número de filas del tablero.
+        ``cols``: int número de columnas del tablero.
+        ## Return
+        ``matrix``: np.array (1, 16, 4, 4 con one-hot encoded de las piezas del tablero de boolean.
+        """
+        if serialized == "0":
+            # Si la cadena es "0", retorna una matriz vacía
+            return np.zeros((16, rows, cols), dtype=bool)
+        assert len(serialized) == rows * cols * 16, ValueError(
+            f"Serialized string length {len(serialized)} does not match expected size {rows * cols * 16}"
+        )
+        v = np.array([list(map(int, serialized))], dtype=bool)
+        matrix = v.reshape((16, rows, cols))
+
+        return matrix
+
     # ####################################################################
     def encode(self):
         """Convierte el tablero en una matriz (1-16-4-4)
@@ -274,7 +295,8 @@ class Board:
         return matrix
 
     # ####################################################################
-    def get_position_index(self, index: int) -> tuple[int, int]:
+    @staticmethod
+    def get_position_index(index: int, rows: int = 4, cols: int = 4) -> tuple[int, int]:
         """Convierte un índice lineal en una posición (row, col) del tablero.
 
         ## Parameters
@@ -284,10 +306,10 @@ class Board:
 
         ``(row, col)``: tuple de enteros con la posición en el tablero.
         """
-        if index < 0 or index >= self.rows * self.cols:
+        if index < 0 or index >= rows * cols:
             raise IndexError("Índice fuera de rango del tablero")
-        row = index // self.cols
-        col = index % self.cols
+        row = index // cols
+        col = index % cols
 
         return (row, col)
 
