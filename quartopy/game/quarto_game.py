@@ -47,9 +47,7 @@ class QuartoGame:
         player_turn = "Player 1" if self.turn else "Player 2"
 
         if self.pick:
-            print(
-                f"\n{Fore.YELLOW}{player_turn} ({current_player.name}) está seleccionando una pieza..."
-            )
+            # print(                f"\n{Fore.YELLOW}{player_turn} ({current_player.name}) está seleccionando una pieza..."            )
 
             valid_selection = False
             for n_tries in range(self.MAX_TRIES):
@@ -59,16 +57,14 @@ class QuartoGame:
                     _r_storage, _c_storage = coord  # en storage_board
                     valid_selection = True
                     break
-                logger.info(
+                logger.debug(
                     f"Intento {n_tries + 1}: Seleccionando pieza {selected_piece}"
                 )
 
             if not valid_selection:
                 raise ValueError(f"Invalid selection after {self.MAX_TRIES} tries")
 
-            print(
-                f"{Fore.GREEN}Seleccionó la pieza: {selected_piece.__repr__(verbose=True)}"
-            )
+            # print(                f"{Fore.GREEN}Seleccionó la pieza: {selected_piece.__repr__(verbose=True)}"            )
 
             self.storage_board.remove_piece(_r_storage, _c_storage)
             self.selected_piece = selected_piece
@@ -86,9 +82,7 @@ class QuartoGame:
             self.move_history.append(move_info)
         else:
             # Colocar pieza
-            print(
-                f"\n{Fore.YELLOW}{player_turn} ({current_player.name} está colocando la pieza seleccionada..."
-            )
+            # print(                f"\n{Fore.YELLOW}{player_turn} ({current_player.name} está colocando la pieza seleccionada..."            )
 
             valid_placement = False
             piece: Piece = self.selected_piece  # type: ignore
@@ -105,12 +99,14 @@ class QuartoGame:
                 if self.game_board.is_empty(row, col):
                     valid_placement = True
                     break
-                logger.info(f"Intento {n_tries + 1}: Colocando pieza en ({row}, {col})")
+                logger.debug(
+                    f"Intento {n_tries + 1}: Colocando pieza en ({row}, {col})"
+                )
 
             if not valid_placement:
                 raise ValueError(f"Invalid selection after {self.MAX_TRIES} tries")
 
-            print(f"{Fore.GREEN}Colocó la pieza en posición ({row}, {col})")
+            # print(f"{Fore.GREEN}Colocó la pieza en posición ({row}, {col})")
 
             self.game_board.put_piece(piece, row, col)
 
@@ -147,12 +143,10 @@ class QuartoGame:
                 self.winner_name = current_player.name
                 self.winner_pos = self.player_turn
                 self.player_won = True
-                print(
-                    f"\n{Back.GREEN}{Fore.BLACK} ¡({self.player_turn}) {current_player.name} GANA LA PARTIDA! {Style.RESET_ALL}"
-                )
+                # print(                    f"\n{Back.GREEN}{Fore.BLACK} ¡({self.player_turn}) {current_player.name} GANA LA PARTIDA! {Style.RESET_ALL}"                )
             elif self.game_board.is_full():
                 self.winner_name = self.TIE
-                print(f"\n{Back.YELLOW}{Fore.BLACK} ¡EMPATE! {Style.RESET_ALL}")
+                # print(f"\n{Back.YELLOW}{Fore.BLACK} ¡EMPATE! {Style.RESET_ALL}")
 
             self.selected_piece = 0
 
@@ -164,16 +158,14 @@ class QuartoGame:
     def show_history(self):
         """Muestra el historial de movimientos formateado en una tabla"""
         if not hasattr(self, "move_history") or not self.move_history:
-            print("No hay historial de movimientos disponible")
+            # print("No hay historial de movimientos disponible")
             return
 
         # Encabezado
-        print("\nHistorial de Movimientos:")
-        print("-" * 80)
-        print(
-            f"{'Mov.':<6} | {'Jugador':<15} | {'Acción':<10} | {'Pieza':<40} | {'Posición'}"
-        )
-        print("-" * 80)
+        # print("\nHistorial de Movimientos:")
+        # print("-" * 80)
+        # print(            f"{'Mov.':<6} | {'Jugador':<15} | {'Acción':<10} | {'Pieza':<40} | {'Posición'}"        )
+        # print("-" * 80)
 
         # Filas
         for i, move in enumerate(self.move_history, start=1):
@@ -183,10 +175,7 @@ class QuartoGame:
                 if move.get("position")
                 else "N/A"
             )
-            print(
-                f"{i:<6} | {move.get('player', 'N/A'):<15} | "
-                f"{move.get('action', 'N/A'):<10} | {pieza:<40} | {pos}"
-            )
+            # print(                f"{i:<6} | {move.get('player', 'N/A'):<15} | "                f"{move.get('action', 'N/A'):<10} | {pieza:<40} | {pos}")
 
     def export_history_to_csv(self, output_folder: str, match_number: int = 1):
         """Exporta el historial a un CSV con nombre que incluye match, fecha y hora"""
@@ -236,7 +225,7 @@ class QuartoGame:
                     ]
                 )
 
-        print(f"\n{Fore.GREEN}Historial guardado en: {filepath}{Style.RESET_ALL}")
+        # print(f"\n{Fore.GREEN}Historial guardado en: {filepath}{Style.RESET_ALL}")
         return filepath
 
     def display_boards(self, exclude_footer: bool = False):
@@ -247,31 +236,25 @@ class QuartoGame:
 
         if not self.pick:
             # Tablero de almacenamiento
-            print(f"\n{Fore.CYAN}=== PIEZAS DISPONIBLES ===")
+            # print(f"\n{Fore.CYAN}=== PIEZAS DISPONIBLES ===")
             self.storage_board.print_board(self.selected_piece)
         else:
             # Tablero de juego principal
-            # print(f"{Fore.YELLOW}=== TABLERO DE JUEGO ===")
+            # # print(f"{Fore.YELLOW}=== TABLERO DE JUEGO ===")
             self.game_board.print_board(self.selected_piece)
 
         # Pieza seleccionada
         if self.selected_piece:
-            print(
-                f"\n{Fore.GREEN}PIEZA SELECCIONADA: {self.selected_piece.__repr__(verbose=False)}"  # type: ignore
-            )
-
+            # print(                f"\n{Fore.GREEN}PIEZA SELECCIONADA: {self.selected_piece.__repr__(verbose=False)}"  # type: ignore            )
+            pass
         # Movimientos válidos
         if not self.pick and hasattr(self, "valid_moves") and self.valid_moves:
-            print(
-                f"\n{Fore.MAGENTA}Posiciones válidas para colocar: {self.valid_moves}"
-            )
-
+            # print(                f"\n{Fore.MAGENTA}Posiciones válidas para colocar: {self.valid_moves}"            )
+            pass
         if exclude_footer:
             return
         # Footer del turno
-        print(f"\n{Back.BLUE}{Fore.BLACK}{'='*60}{Style.RESET_ALL}")
-        print(
-            f"{Back.BLUE}{Fore.BLACK} TURNO ({self.player_turn}): {current_player.name} {Style.RESET_ALL}"
-        )
-        print(f"{Back.BLUE}{Fore.BLACK} ACCIÓN: {action.center(44)} {Style.RESET_ALL}")
-        print(f"{Back.BLUE}{Fore.BLACK}{'='*60}{Style.RESET_ALL}\n")
+        # print(f"\n{Back.BLUE}{Fore.BLACK}{'='*60}{Style.RESET_ALL}")
+        # print(            f"{Back.BLUE}{Fore.BLACK} TURNO ({self.player_turn}): {current_player.name} {Style.RESET_ALL}"        )
+        # print(f"{Back.BLUE}{Fore.BLACK} ACCIÓN: {action.center(44)} {Style.RESET_ALL}")
+        # print(f"{Back.BLUE}{Fore.BLACK}{'='*60}{Style.RESET_ALL}\n")

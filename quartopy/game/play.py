@@ -11,7 +11,7 @@ from os import path
 builtin_bot_folder = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../bot/")
 )
-print(f"Directorio de bots integrado: {builtin_bot_folder}")
+# print(f"Directorio de bots integrado: {builtin_bot_folder}")
 
 
 def go_quarto(
@@ -42,9 +42,7 @@ def go_quarto(
         dict: Resultados del torneo con victorias de cada jugador y empates.
     """
 
-    print(
-        f"\n{Back.BLUE}{Fore.BLACK}{' INICIANDO TORNEO DE QUARTO ':=^60}{Style.RESET_ALL}"
-    )
+    # print(        f"\n{Back.BLUE}{Fore.BLACK}{' INICIANDO TORNEO DE QUARTO ':=^60}{Style.RESET_ALL}"    )
     logger.info(
         f"Iniciando torneo de Quarto con {matches} partidas entre {player1_file} y {player2_file}"
     )
@@ -93,10 +91,10 @@ def play_games(
     Returns:
         * match_results (list[int]): Lista con resultados de cada partida (+1 para P1, -1 para P2, 0 para empate).
     """
-    print(f" Partidas: {matches}")
-    print(f" Jugador 1: {player1.name}")
-    print(f" Jugador 2: {player2.name}")
-    print(f" Retardo: {delay} segundos\n")
+    # print(f" Partidas: {matches}")
+    # print(f" Jugador 1: {player1.name}")
+    # print(f" Jugador 2: {player2.name}")
+    # print(f" Retardo: {delay} segundos\n")
 
     # Crear directorio para guardar partidas si no existe
     output_folder = os.path.abspath(match_dir)
@@ -109,9 +107,7 @@ def play_games(
     match_results: dict[str, int] = {}  # +1 para P1, -1 para P2, "tie" para empate
 
     for match in range(1, matches + 1):
-        print(
-            f"\n{Back.BLUE}{Fore.BLACK}{f' PARTIDA {match}/{matches} ':=^60}{Style.RESET_ALL}"
-        )
+        # print(            f"\n{Back.BLUE}{Fore.BLACK}{f' PARTIDA {match}/{matches} ':=^60}{Style.RESET_ALL}"        )
 
         game = QuartoGame(player1=player1, player2=player2)
 
@@ -130,7 +126,7 @@ def play_games(
 
         # Exportar historial con número de match
         saved_file = game.export_history_to_csv(output_folder, match_number=match)
-        print(f" Partida guardada como: {os.path.basename(saved_file)}")
+        # print(f" Partida guardada como: {os.path.basename(saved_file)}")
 
         # resultado de la partida
         if game.player_won:
@@ -142,27 +138,25 @@ def play_games(
                 results["P2"] += 1
                 match_results[saved_file] = -1
 
-            print(
-                f"\n{Back.GREEN}{Fore.BLACK} RESULTADO: {winner} GANA {Style.RESET_ALL}"
-            )
+            # print(                f"\n{Back.GREEN}{Fore.BLACK} RESULTADO: {winner} GANA {Style.RESET_ALL}"            )
         else:
             results["Empates"] += 1
             match_results[saved_file] = 0
-            print(f"\n{Back.YELLOW}{Fore.BLACK} RESULTADO: EMPATE {Style.RESET_ALL}")
+            # print(f"\n{Back.YELLOW}{Fore.BLACK} RESULTADO: EMPATE {Style.RESET_ALL}")
 
-        if match < matches:
-            print(f"\n{Fore.CYAN}Preparando siguiente partida...{Style.RESET_ALL}")
+        # if match < matches:
+        # print(f"\n{Fore.CYAN}Preparando siguiente partida...{Style.RESET_ALL}")
 
     # Resumen final
-    print(f"\n{Back.BLUE}{Fore.WHITE}{' RESULTADOS FINALES ':=^60}{Style.RESET_ALL}")
-    print(f" Partidas totales: {matches}")
-    print("-" * 60)
-    for player, wins in results.items():
-        print(f" {player:<15}: {wins} victorias")
-    print("-" * 60)
+    # print(f"\n{Back.BLUE}{Fore.WHITE}{' RESULTADOS FINALES ':=^60}{Style.RESET_ALL}")
+    # print(f" Partidas totales: {matches}")
+    # print("-" * 60)
+    # for player, wins in results.items():
+    # print(f" {player:<15}: {wins} victorias")
+    # print("-" * 60)
 
-    print(f" Todas las partidas guardadas en: {output_folder}")
-    print(f"{Back.BLUE}{Fore.WHITE}{'='*60}{Style.RESET_ALL}\n")
+    # print(f" Todas las partidas guardadas en: {output_folder}")
+    # print(f"{Back.BLUE}{Fore.WHITE}{'='*60}{Style.RESET_ALL}\n")
     if return_file_paths:
         return match_results
     else:
