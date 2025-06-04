@@ -259,6 +259,7 @@ class Board:
         return "".join(str(int(x)) for x in self.encode().flatten())
 
     @staticmethod
+    # ####################################################################
     def deserialize(serialized: str, rows: int = 4, cols: int = 4):
         """Crea una matriz del tablero (1-16-4-4) a partir de una cadena de texto serializada de cadena de bits.
         ## Parameters
@@ -266,15 +267,15 @@ class Board:
         ``rows``: int número de filas del tablero.
         ``cols``: int número de columnas del tablero.
         ## Return
-        ``matrix``: np.array (1, 16, 4, 4 con one-hot encoded de las piezas del tablero de boolean.
+        ``matrix``: np.array (1, 16, 4, 4) con one-hot encoded de las piezas del tablero de boolean.
         """
-        if serialized == "0":
+        if serialized == "0" or serialized == -1:
             # Si la cadena es "0", retorna una matriz vacía
-            return np.zeros((16, rows, cols), dtype=bool)
+            return np.zeros((16, rows, cols), dtype=np.float32)
         assert len(serialized) == rows * cols * 16, ValueError(
             f"Serialized string length {len(serialized)} does not match expected size {rows * cols * 16}"
         )
-        v = np.array([list(map(int, serialized))], dtype=bool)
+        v = np.array([list(map(int, serialized))], dtype=np.float32)
         matrix = v.reshape((16, rows, cols))
 
         return matrix
@@ -293,6 +294,30 @@ class Board:
                 if isinstance(piece, Piece):
                     matrix[0, :, r, c] = piece.vectorize_onehot()
         return matrix
+
+    @staticmethod
+    # ####################################################################
+    def pos_index2vector(index: int, rows: int = 4, cols: int = 4) -> np.ndarray:
+        """Convierte una posición en un vector one-hot encoded de tamaño (rows*cols, ).
+
+        ## Parameters
+        * ``index``: int índice lineal (0 a rows*cols-1).
+        En caso de -1, retorna un vector vacío.
+        * ``rows``: int número de filas del tablero
+        * ``cols``: int número de columnas del tablero
+
+        ## Return
+        ``vector``: np.array (rows*cols, ) con one-hot encoded de la posición.
+        """
+        if index < -1 or index >= rows * cols:
+            raise IndexError("Índice fuera de rango del tablero")
+
+        vector = np.zeros((rows * cols,), dtype=np.float32)
+        if index == -1:
+            # Si el índice es -1, retorna un vector vacío
+            return vector
+        vector[index] = True
+        return vector
 
     # ####################################################################
     @staticmethod

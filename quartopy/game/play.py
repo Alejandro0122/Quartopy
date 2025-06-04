@@ -79,6 +79,7 @@ def play_games(
     delay: float = 0,
     verbose: bool = True,
     match_dir: str = "./partidas_guardadas/",
+    return_file_paths: bool = True,
 ):
     """Juega un torneo de Quarto entre dos jugadores.
     Args:
@@ -101,8 +102,8 @@ def play_games(
     output_folder = os.path.abspath(match_dir)
 
     results: dict[str, int] = {
-        f"{player1.name} (P1)": 0,
-        f"{player2.name} (P2)": 0,
+        "P1": 0,
+        "P2": 0,
         "Empates": 0,
     }
     match_results: dict[str, int] = {}  # +1 para P1, -1 para P2, "tie" para empate
@@ -135,10 +136,10 @@ def play_games(
         if game.player_won:
             winner = game.winner_name
             if game.winner_pos == "Player 1":
-                results[f"{player1.name} (P1)"] += 1
+                results["P1"] += 1
                 match_results[saved_file] = +1
             else:
-                results[f"{player2.name} (P2)"] += 1
+                results["P2"] += 1
                 match_results[saved_file] = -1
 
             print(
@@ -162,4 +163,7 @@ def play_games(
 
     print(f" Todas las partidas guardadas en: {output_folder}")
     print(f"{Back.BLUE}{Fore.WHITE}{'='*60}{Style.RESET_ALL}\n")
-    return match_results
+    if return_file_paths:
+        return match_results
+    else:
+        return results
