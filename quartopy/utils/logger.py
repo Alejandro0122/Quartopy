@@ -12,14 +12,36 @@ Python 3
 import logging
 from sys import stdout
 from datetime import datetime
+from colorama import Fore, Style, Back, init as colorama_init
 
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="[%(asctime)s][%(levelname)s] %(message)s",
-    stream=stdout,
+colorama_init(autoreset=True)
+
+
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.DEBUG: Fore.CYAN,
+        logging.INFO: Fore.GREEN,
+        logging.WARNING: Fore.YELLOW,
+        logging.ERROR: Fore.RED,
+        logging.CRITICAL: Fore.MAGENTA + Style.BRIGHT,
+    }
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, "")
+        message = super().format(record)
+        return f"{color}{message}{Style.RESET_ALL}"
+
+
+handler = logging.StreamHandler(stdout)
+handler.setLevel(logging.INFO)
+formatter = ColorFormatter(
+    f"{Fore.GREEN + Back.RED}[%(asctime)s]{Back.RESET}[%(levelname)s]{Back.YELLOW}[%(filename)s]{Back.RESET} %(message)s",
     datefmt="%m-%d %H:%M:%S",
 )
+handler.setFormatter(formatter)
+
+logging.basicConfig(handlers=[handler], level=logging.INFO)
 logger = logging.getLogger("Quartopy")
 logger.debug("Creating logger for Quartopy game")
-logger.info(datetime.now())
+logger.debug(datetime.now())
