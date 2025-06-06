@@ -7,7 +7,7 @@ import time
 import os
 from colorama import Fore, Back, Style
 from os import path
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 builtin_bot_folder = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../bot/")
@@ -107,10 +107,13 @@ def play_games(
     }
     match_results: dict[str, int] = {}  # +1 para P1, -1 para P2, "tie" para empate
 
-    match_iter = (
-        tqdm(range(1, matches + 1), desc="Playing matches")
-        if verbose
-        else range(1, matches + 1)
+    match_iter = tqdm(
+        range(1, matches + 1),
+        desc="Playing matches",
+        mininterval=0.3,
+        miniters=1,
+        position=0,
+        leave=False,
     )
     for match in match_iter:
         # print(            f"\n{Back.BLUE}{Fore.BLACK}{f' PARTIDA {match}/{matches} ':=^60}{Style.RESET_ALL}"        )
