@@ -79,6 +79,7 @@ def play_games(
     verbose: bool = True,
     match_dir: str = "./partidas_guardadas/",
     return_file_paths: bool = True,
+    PROGRESS_MESSAGE: str = "Playing matches...",
 ):
     """Juega un torneo de Quarto entre dos jugadores.
     Args:
@@ -109,7 +110,7 @@ def play_games(
 
     match_iter = tqdm(
         range(1, matches + 1),
-        desc="Playing matches",
+        desc=PROGRESS_MESSAGE,
         mininterval=0.3,
         miniters=1,
         position=0,
