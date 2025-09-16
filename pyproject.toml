@@ -1,6 +1,6 @@
 [project]
 name = "quartopy"
-version = "0.1.0"
+version = "0.7.0"
 description = "Juego Quarto con CLI y bots"
 authors = [
     { name="Jonathan Zea" },
@@ -18,8 +18,6 @@ dependencies = [
 where = ["."]
 include = ["quartopy*", "bot*", "quarto_CLI*"]
 
-[project.scripts]
-quarto-cli = "quarto_CLI:play_quarto"
 
 [build-system]
 requires = ["setuptools>=64.0"]

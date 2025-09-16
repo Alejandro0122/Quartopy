@@ -9,6 +9,8 @@ from colorama import Fore, Back, Style
 from os import path
 from tqdm.auto import tqdm
 
+from collections import defaultdict
+
 builtin_bot_folder = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../bot/")
 )
@@ -25,7 +27,6 @@ def go_quarto(
     verbose: bool = True,
     folder_bots: str = "bot/",
     builtin_bots: bool = False,
-    match_dir: str = "./partidas_guardadas/",
 ):
     """Inicia un torneo de Quarto entre dos bots.
     Args:
@@ -43,7 +44,6 @@ def go_quarto(
         dict: Resultados del torneo con victorias de cada jugador y empates.
     """
 
-    # print(        f"\n{Back.BLUE}{Fore.BLACK}{' INICIANDO TORNEO DE QUARTO ':=^60}{Style.RESET_ALL}"    )
     logger.info(
         f"Iniciando torneo de Quarto con {matches} partidas entre {player1_file} y {player2_file}"
     )
@@ -66,7 +66,6 @@ def go_quarto(
         player2=player2,
         delay=delay,
         verbose=verbose,
-        match_dir=match_dir,
     )
     return results
 
@@ -77,9 +76,9 @@ def play_games(
     player2: BotAI,
     delay: float = 0,
     verbose: bool = True,
-    match_dir: str = "./partidas_guardadas/",
-    return_file_paths: bool = True,
     PROGRESS_MESSAGE: str = "Playing matches...",
+    save_match: bool = True,
+    mode_2x2: bool = False,
 ):
     """Juega un torneo de Quarto entre dos jugadores.
     Args:
@@ -88,86 +87,47 @@ def play_games(
         * player2 (BotAI): Instancia del bot jugador 2.
         * delay (float): Retardo entre movimientos en segundos.
         * verbose (bool): Si True, muestra salida detallada de las partidas.
-        * match_dir (str): Directorio donde se guardarán las partidas.
-
+        * PROGRESS_MESSAGE (str): Mensaje a mostrar en la barra de progreso.
+        * save_match (bool): Si True, guarda el historial de cada partida en CSV.
+                    NOTA: Legacy code, ya no se puede usar en entrenamiento.
+        * mode_2x2 (bool): Si True, activa el modo de victoria 2x2.
     Returns:
-        * match_results (list[int]): Lista con resultados de cada partida (+1 para P1, -1 para P2, 0 para empate).
+        * results (list): Lista de diccionarios con resultados de cada partida.
+        * win_rate (dict): Diccionario con conteo de victorias por jugador y empates.
     """
-    # print(f" Partidas: {matches}")
-    # print(f" Jugador 1: {player1.name}")
-    # print(f" Jugador 2: {player2.name}")
-    # print(f" Retardo: {delay} segundos\n")
 
-    # Crear directorio para guardar partidas si no existe
-    output_folder = os.path.abspath(match_dir)
+    # counter of wins and ties
+    win_rate: dict[str, int] = defaultdict(lambda: 0)
 
-    results: dict[str, int] = {
-        "P1": 0,
-        "P2": 0,
-        "Empates": 0,
-    }
-    match_results: dict[str, int] = {}  # +1 para P1, -1 para P2, "tie" para empate
+    # list by match
+    results = []
 
-    match_iter = tqdm(
+    for match in tqdm(
         range(1, matches + 1),
         desc=PROGRESS_MESSAGE,
         mininterval=0.3,
         miniters=1,
         position=0,
         leave=False,
-    )
-    for match in match_iter:
-        # print(            f"\n{Back.BLUE}{Fore.BLACK}{f' PARTIDA {match}/{matches} ':=^60}{Style.RESET_ALL}"        )
+    ):
 
-        game = QuartoGame(player1=player1, player2=player2)
-
-        _move_count = 0
+        game = QuartoGame(player1=player1, player2=player2, mode_2x2=mode_2x2)
+        # -------- PLAYING
         while not game.player_won and not game.game_board.is_full():
-            _move_count += 1
+            game.play_turn()
             if verbose:
                 game.display_boards()
-            game.play_turn()
 
             if delay > 0:
                 time.sleep(delay)
+            game.cambiar_turno()
 
-        if verbose:
-            game.display_boards(exclude_footer=True)
+        # Aftermath
+        if save_match:
+            # Exportar historial con número de match
+            game.export_history_to_csv(match_number=match)
 
-        # Exportar historial con número de match
-        saved_file = game.export_history_to_csv(output_folder, match_number=match)
-        # print(f" Partida guardada como: {os.path.basename(saved_file)}")
+        win_rate[game.winner_pos] += 1
+        results.append(game.to_dict)
 
-        # resultado de la partida
-        if game.player_won:
-            winner = game.winner_name
-            if game.winner_pos == "Player 1":
-                results["P1"] += 1
-                match_results[saved_file] = +1
-            else:
-                results["P2"] += 1
-                match_results[saved_file] = -1
-
-            # print(                f"\n{Back.GREEN}{Fore.BLACK} RESULTADO: {winner} GANA {Style.RESET_ALL}"            )
-        else:
-            results["Empates"] += 1
-            match_results[saved_file] = 0
-            # print(f"\n{Back.YELLOW}{Fore.BLACK} RESULTADO: EMPATE {Style.RESET_ALL}")
-
-        # if match < matches:
-        # print(f"\n{Fore.CYAN}Preparando siguiente partida...{Style.RESET_ALL}")
-
-    # Resumen final
-    # print(f"\n{Back.BLUE}{Fore.WHITE}{' RESULTADOS FINALES ':=^60}{Style.RESET_ALL}")
-    # print(f" Partidas totales: {matches}")
-    # print("-" * 60)
-    # for player, wins in results.items():
-    # print(f" {player:<15}: {wins} victorias")
-    # print("-" * 60)
-
-    # print(f" Todas las partidas guardadas en: {output_folder}")
-    # print(f"{Back.BLUE}{Fore.WHITE}{'='*60}{Style.RESET_ALL}\n")
-    if return_file_paths:
-        return match_results
-    else:
-        return results
+    return results, win_rate

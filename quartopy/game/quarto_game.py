@@ -3,7 +3,6 @@ from ..models.Bot import BotAI
 from .piece import Piece
 from ..utils.logger import logger
 
-from colorama import Fore, Back, Style
 from os import path, makedirs
 from datetime import datetime
 import csv
@@ -13,23 +12,23 @@ logger.debug(f"{__name__} importado correctamente")
 
 class QuartoGame:
 
-    def __init__(self, player1: BotAI, player2: BotAI):
+    def __init__(self, player1: BotAI, player2: BotAI, mode_2x2: bool = False):
         self.MAX_TRIES = 16  # todos los intentos posibles
         self.TIE = "Tie"
-
         self.selected_piece: Piece | int = 0
         self.game_board = Board("Game Board", False, 4, 4)
         self.storage_board = Board("Storage Board", True, 2, 8)
         self.turn = True  # True for player 1, False for player 2
         self.pick = True  # True for picking phase, False for placing phase
         self.move_history: list[dict[str, str]] = []
+        self.mode_2x2 = mode_2x2
 
         # Configuración de jugadores
         self.player1 = player1
         self.player2 = player2
 
         self.player_won: bool = False
-        self.winner_name: str = self.TIE
+        self.match_result: str = self.TIE
         self.valid_moves = []
 
     def get_current_player(self):
@@ -44,11 +43,8 @@ class QuartoGame:
 
     def play_turn(self):
         current_player = self.get_current_player()
-        player_turn = "Player 1" if self.turn else "Player 2"
 
-        if self.pick:
-            # print(                f"\n{Fore.YELLOW}{player_turn} ({current_player.name}) está seleccionando una pieza..."            )
-
+        if self.pick:  # Selección de pieza
             valid_selection = False
             for n_tries in range(self.MAX_TRIES):
                 selected_piece: Piece = current_player.select(self, n_tries)
@@ -64,26 +60,23 @@ class QuartoGame:
             if not valid_selection:
                 raise ValueError(f"Invalid selection after {self.MAX_TRIES} tries")
 
-            # print(                f"{Fore.GREEN}Seleccionó la pieza: {selected_piece.__repr__(verbose=True)}"            )
-
             self.storage_board.remove_piece(_r_storage, _c_storage)
             self.selected_piece = selected_piece
 
             move_info = {
-                "player": current_player.name,
+                "player_name": current_player.name,
+                "player_pos": self.player_turn,
                 "action": "selected",
                 "piece": self.selected_piece.__repr__(verbose=True),
-                "position": None,
-                "position_index": -1,
-                "attempt": n_tries + 1,
                 "piece_index": self.selected_piece.index(),
-                "board": "",
+                # "position": None,
+                # "position_index": -1,
+                "attempt": n_tries + 1,
+                # "board": "",
             }
             self.move_history.append(move_info)
-        else:
-            # Colocar pieza
-            # print(                f"\n{Fore.YELLOW}{player_turn} ({current_player.name} está colocando la pieza seleccionada..."            )
 
+        else:  # Colocación de pieza
             valid_placement = False
             piece: Piece = self.selected_piece  # type: ignore
             assert isinstance(
@@ -106,78 +99,43 @@ class QuartoGame:
             if not valid_placement:
                 raise ValueError(f"Invalid selection after {self.MAX_TRIES} tries")
 
-            # print(f"{Fore.GREEN}Colocó la pieza en posición ({row}, {col})")
-
             self.game_board.put_piece(piece, row, col)
 
-            # # prueba de serialización y deserialización del tablero
-            # logger.debug("Check serializing and deserializing the game board")
-            # matrix = self.game_board.encode()
-            # matrix = matrix.squeeze(0)
-            # serial = self.game_board.serialize()
-            # m2 = Board.deserialize(serial)
-            # import numpy as np
-
-            # logger.debug(matrix)
-            # logger.debug(matrix.shape)
-            # logger.debug(m2)
-            # logger.debug(m2.shape)
-            # assert np.array_equal(
-            #     m2, matrix
-            # ), "Error al serializar y deserializar el tablero"
-
             move_info = {
-                "player": current_player.name,
+                "player_name": current_player.name,
+                "player_pos": self.player_turn,
                 "action": "placed",
-                "piece": piece.__repr__(verbose=False),
+                # "piece": piece.__repr__(verbose=False),
+                # "piece_index": piece.index(),
                 "position": (row, col),
                 "position_index": self.game_board.pos2index(row, col),
                 "attempt": n_tries + 1,
-                "piece_index": piece.index(),
                 "board": self.game_board.serialize(),
             }
             self.move_history.append(move_info)
 
             # Verificar ganador
-            if self.game_board.check_win():
-                self.winner_name = current_player.name
+            if self.game_board.check_win(mode_2x2=self.mode_2x2):
+                self.match_result = current_player.name
                 self.winner_pos = self.player_turn
                 self.player_won = True
-                # print(                    f"\n{Back.GREEN}{Fore.BLACK} ¡({self.player_turn}) {current_player.name} GANA LA PARTIDA! {Style.RESET_ALL}"                )
+
             elif self.game_board.is_full():
-                self.winner_name = self.TIE
-                # print(f"\n{Back.YELLOW}{Fore.BLACK} ¡EMPATE! {Style.RESET_ALL}")
+                self.match_result = self.TIE
+                self.winner_pos = self.TIE
 
             self.selected_piece = 0
 
+    def cambiar_turno(self):
+        """Cambia el turno y la fase del juego"""
         # Cambiar turno
         if self.pick:
             self.turn = not self.turn
         self.pick = not self.pick
 
-    def show_history(self):
-        """Muestra el historial de movimientos formateado en una tabla"""
-        if not hasattr(self, "move_history") or not self.move_history:
-            # print("No hay historial de movimientos disponible")
-            return
-
-        # Encabezado
-        # print("\nHistorial de Movimientos:")
-        # print("-" * 80)
-        # print(            f"{'Mov.':<6} | {'Jugador':<15} | {'Acción':<10} | {'Pieza':<40} | {'Posición'}"        )
-        # print("-" * 80)
-
-        # Filas
-        for i, move in enumerate(self.move_history, start=1):
-            pieza = str(move.get("piece", "N/A")).replace(", ", " | ")
-            pos = (
-                f"({move['position'][0]}, {move['position'][1]})"
-                if move.get("position")
-                else "N/A"
-            )
-            # print(                f"{i:<6} | {move.get('player', 'N/A'):<15} | "                f"{move.get('action', 'N/A'):<10} | {pieza:<40} | {pos}")
-
-    def export_history_to_csv(self, output_folder: str, match_number: int = 1):
+    def export_history_to_csv(
+        self, output_folder: str = "./partidas_guardadas/", match_number: int = 1
+    ):
         """Exporta el historial a un CSV con nombre que incluye match, fecha y hora"""
         # Crear directorio si no existe
         makedirs(output_folder, exist_ok=True)
@@ -225,36 +183,38 @@ class QuartoGame:
                     ]
                 )
 
-        # print(f"\n{Fore.GREEN}Historial guardado en: {filepath}{Style.RESET_ALL}")
         return filepath
 
     def display_boards(self, exclude_footer: bool = False):
         """Muestra ambos tableros con formato mejorado"""
 
-        current_player = self.get_next_player()
-        action = "SELECCIONAR PIEZA" if self.pick else "COLOCAR PIEZA"
+        current_player = self.get_current_player()
 
-        if not self.pick:
+        action = "SELECCIONAR PIEZA" if self.pick else "COLOCAR PIEZA"
+        print(f"\n({self.player_turn}) [{current_player.name}] {action}")
+
+        if self.pick:
             # Tablero de almacenamiento
-            # print(f"\n{Fore.CYAN}=== PIEZAS DISPONIBLES ===")
             self.storage_board.print_board(self.selected_piece)
         else:
             # Tablero de juego principal
-            # # print(f"{Fore.YELLOW}=== TABLERO DE JUEGO ===")
             self.game_board.print_board(self.selected_piece)
 
         # Pieza seleccionada
         if self.selected_piece:
-            # print(                f"\n{Fore.GREEN}PIEZA SELECCIONADA: {self.selected_piece.__repr__(verbose=False)}"  # type: ignore            )
             pass
         # Movimientos válidos
         if not self.pick and hasattr(self, "valid_moves") and self.valid_moves:
-            # print(                f"\n{Fore.MAGENTA}Posiciones válidas para colocar: {self.valid_moves}"            )
             pass
         if exclude_footer:
             return
-        # Footer del turno
-        # print(f"\n{Back.BLUE}{Fore.BLACK}{'='*60}{Style.RESET_ALL}")
-        # print(            f"{Back.BLUE}{Fore.BLACK} TURNO ({self.player_turn}): {current_player.name} {Style.RESET_ALL}"        )
-        # print(f"{Back.BLUE}{Fore.BLACK} ACCIÓN: {action.center(44)} {Style.RESET_ALL}")
-        # print(f"{Back.BLUE}{Fore.BLACK}{'='*60}{Style.RESET_ALL}\n")
+
+    @property
+    def to_dict(self):
+        """Converts the object to a dictionary including only data required for training."""
+        return {
+            "move_history": self.move_history,
+            "Player 1": self.player1.name,
+            "Player 2": self.player2.name,
+            "winner_pos": self.winner_pos,
+        }

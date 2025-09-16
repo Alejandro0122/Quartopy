@@ -14,6 +14,7 @@ class Board:
         ]
         self.rows: int = rows
         self.cols: int = cols
+        self.last_move: tuple[int, int] | None = None  # (row, col) of last move
 
         if self.storage:
             self.__init_pieces()
@@ -70,13 +71,74 @@ class Board:
         # Solo asignar si es una Pieza o 0 (vacío)
         if isinstance(piece, Piece):  # or piece == 0:
             self.board[row][col] = piece
+            self.last_move = (row, col)
         else:
             raise ValueError("Solo se pueden colocar objetos Piece o 0 (vacío)")
 
-    def check_win(self):
-        """Retorna True si hay un ganador, False en caso contrario"""
-        if self.__check_all_lines():
+    def check_win(self, mode_2x2: bool = False) -> bool:
+        """Returns True if there is a winning condition on the board.
+        False otherwise.
+        A winning condition is met when there is a row, column, or diagonal
+        where all pieces share at least one common attribute (size, coloration,
+        shape, or hole).
+        It only analyzes around the last placed piece.
+        It assumes previous position was not winning.
+        # Parameters
+        * mode_2x2 (bool): If True, checks for 2x2 square winning condition.
+            Default is False.
+        """
+        assert self.last_move is not None, "last_position should not be None here"
+
+        row, col = self.last_move
+
+        # Check the row of the last placed piece
+        if self.__is_winning_line(self.board[row]):
             return True
+
+        # Check the column of the last placed piece
+        column_pieces = [self.board[r][col] for r in range(self.rows)]
+        if self.__is_winning_line(column_pieces):
+            return True
+
+        # Check main diagonal if the piece is on it
+        if row == col:
+            main_diagonal_pieces = [self.board[i][i] for i in range(self.rows)]
+            if self.__is_winning_line(main_diagonal_pieces):
+                return True
+
+        # Check anti-diagonal if the piece is on it
+        if row + col == self.cols - 1:
+            anti_diagonal_pieces = [
+                self.board[i][self.cols - 1 - i] for i in range(self.rows)
+            ]
+            if self.__is_winning_line(anti_diagonal_pieces):
+                return True
+
+        # Check squares
+        if mode_2x2:
+            # Se evalúan las 4 posibles posiciones del cuadrado 2x2
+            # Cada square está conformado por las posiciones
+            # (r-1, c-1)   (r-1, c)
+            # (r  ,   c)   (r  , c)
+            # r itera de [row, row+1]
+            # c itera de [col, col+1]
+
+            for r in range(row, row + 2):
+                for c in range(col, col + 2):
+                    # check square only if it fits in the board
+                    if r - 1 < 0 or c - 1 < 0:
+                        continue
+                    if r >= self.rows or c >= self.cols:
+                        continue
+
+                    square_pieces = [
+                        self.board[r - 1][c - 1],
+                        self.board[r - 1][c],
+                        self.board[r][c - 1],
+                        self.board[r][c],
+                    ]
+                    if self.__is_winning_line(square_pieces):
+                        return True
         return False
 
     def is_full(self):
