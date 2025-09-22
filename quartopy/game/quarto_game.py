@@ -110,7 +110,7 @@ class QuartoGame:
                 "position": (row, col),
                 "position_index": self.game_board.pos2index(row, col),
                 "attempt": n_tries + 1,
-                "board": self.game_board.serialize(),
+                "board_after": self.game_board.serialize(),
             }
             self.move_history.append(move_info)
 
@@ -216,5 +216,5 @@ class QuartoGame:
             "move_history": self.move_history,
             "Player 1": self.player1.name,
             "Player 2": self.player2.name,
-            "winner_pos": self.winner_pos,
+            "result": self.winner_pos,
         }

@@ -9,6 +9,7 @@ from colorama import Fore, Back, Style
 from os import path
 from tqdm.auto import tqdm
 
+from typing import Any
 from collections import defaultdict
 
 builtin_bot_folder = os.path.abspath(
@@ -92,7 +93,7 @@ def play_games(
                     NOTA: Legacy code, ya no se puede usar en entrenamiento.
         * mode_2x2 (bool): Si True, activa el modo de victoria 2x2.
     Returns:
-        * results (list): Lista de diccionarios con resultados de cada partida.
+        * matches_data (list): Lista de diccionarios con resultados de cada partida.
         * win_rate (dict): Diccionario con conteo de victorias por jugador y empates.
     """
 
@@ -100,7 +101,7 @@ def play_games(
     win_rate: dict[str, int] = defaultdict(lambda: 0)
 
     # list by match
-    results = []
+    matches_data: list[dict[str, Any]] = []
 
     for match in tqdm(
         range(1, matches + 1),
@@ -128,6 +129,6 @@ def play_games(
             game.export_history_to_csv(match_number=match)
 
         win_rate[game.winner_pos] += 1
-        results.append(game.to_dict)
+        matches_data.append(game.to_dict)
 
-    return results, win_rate
+    return matches_data, win_rate
