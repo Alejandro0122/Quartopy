@@ -123,7 +123,8 @@ def play_games(
             if delay > 0:
                 time.sleep(delay)
             game.cambiar_turno()
-        game.display_end()
+        if verbose:
+            game.display_end()
         # Aftermath
         if save_match:
             # Exportar historial con número de match
