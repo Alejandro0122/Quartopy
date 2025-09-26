@@ -6,6 +6,8 @@ from ..utils.logger import logger
 from os import path, makedirs
 from datetime import datetime
 import csv
+from colorama import Fore, Back
+
 
 logger.debug(f"{__name__} importado correctamente")
 
@@ -30,6 +32,7 @@ class QuartoGame:
         self.player_won: bool = False
         self.match_result: str = self.TIE
         self.valid_moves = []
+        self.winner_pos: str = self.TIE
 
     def get_current_player(self):
         return self.player1 if self.turn else self.player2
@@ -124,7 +127,7 @@ class QuartoGame:
                 self.match_result = self.TIE
                 self.winner_pos = self.TIE
 
-            self.selected_piece = 0
+            # self.selected_piece = 0
 
     def cambiar_turno(self):
         """Cambia el turno y la fase del juego"""
@@ -165,21 +168,22 @@ class QuartoGame:
 
             # Escribir movimientos
             for i, move in enumerate(self.move_history, start=1):
+                piece = move.get("piece", "N/A")
+                piece_index = move.get("piece_index", "N/A")
+                position = move.get("position", "N/A")
+                position_index = move.get("position_index", "N/A")
+                board = move.get("board_after", "N/A")
                 writer.writerow(
                     [
                         i,
-                        move["player"],
+                        move["player_name"],
                         move["action"],
-                        move["piece"],
-                        move["piece_index"],
-                        (
-                            f"({move['position'][0]}, {move['position'][1]})"
-                            if move["position"]
-                            else "N/A"
-                        ),
-                        move["position_index"],
+                        piece,
+                        piece_index,
+                        position,
+                        position_index,
                         move["attempt"],
-                        move["board"],
+                        board,
                     ]
                 )
 
@@ -190,14 +194,19 @@ class QuartoGame:
 
         current_player = self.get_current_player()
 
-        action = "SELECCIONAR PIEZA" if self.pick else "COLOCAR PIEZA"
-        print(f"\n({self.player_turn}) [{current_player.name}] {action}")
+        action = "SELECCIONA PIEZA" if self.pick else "=" * 40 + "\nCOLOCA PIEZA"
+        print(f"\n({self.player_turn}) [{current_player.name}] {action}", end="")
 
         if self.pick:
             # Tablero de almacenamiento
+            back = Back.YELLOW
+            color = Fore.BLACK
+            print(f" ->{back}{color}({self.selected_piece})")
+            print("Piezas en almacenamiento:")
             self.storage_board.print_board(self.selected_piece)
         else:
             # Tablero de juego principal
+            print("\nTablero de juego:")
             self.game_board.print_board(self.selected_piece)
 
         # Pieza seleccionada
@@ -208,6 +217,18 @@ class QuartoGame:
             pass
         if exclude_footer:
             return
+
+    def display_end(self):
+        """Muestra el resultado final de la partida"""
+        print("\n" + "=" * 40)
+        if self.player_won:
+            winner = self.get_current_player()
+            print(
+                f"{Fore.GREEN}¡{self.player_turn} [{winner.name}] ha ganado la partida!{Fore.RESET}"
+            )
+        else:
+            print(f"{Fore.YELLOW}¡La partida ha terminado en empate!{Fore.RESET}")
+        print("=" * 40 + "\n")
 
     @property
     def to_dict(self):

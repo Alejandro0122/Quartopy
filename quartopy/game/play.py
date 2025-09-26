@@ -15,7 +15,6 @@ from collections import defaultdict
 builtin_bot_folder = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../bot/")
 )
-# print(f"Directorio de bots integrado: {builtin_bot_folder}")
 
 
 def go_quarto(
@@ -28,6 +27,7 @@ def go_quarto(
     verbose: bool = True,
     folder_bots: str = "bot/",
     builtin_bots: bool = False,
+    mode_2x2: bool = True,
 ):
     """Inicia un torneo de Quarto entre dos bots.
     Args:
@@ -67,6 +67,7 @@ def go_quarto(
         player2=player2,
         delay=delay,
         verbose=verbose,
+        mode_2x2=mode_2x2,
     )
     return results
 
@@ -79,7 +80,7 @@ def play_games(
     verbose: bool = True,
     PROGRESS_MESSAGE: str = "Playing matches...",
     save_match: bool = True,
-    mode_2x2: bool = False,
+    mode_2x2: bool = True,
 ):
     """Juega un torneo de Quarto entre dos jugadores.
     Args:
@@ -122,7 +123,7 @@ def play_games(
             if delay > 0:
                 time.sleep(delay)
             game.cambiar_turno()
-
+        game.display_end()
         # Aftermath
         if save_match:
             # Exportar historial con número de match

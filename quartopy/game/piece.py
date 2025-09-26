@@ -1,6 +1,5 @@
 from enum import Enum
 import numpy as np
-from torch import Tensor
 
 
 class Size(Enum):
@@ -109,7 +108,7 @@ class Piece:
 
     # ####################################################################
     @classmethod
-    def from_onehot(cls, vector: np.ndarray | Tensor) -> "Piece":
+    def from_onehot(cls, vector: np.ndarray) -> "Piece":
         """Convierte un vector one-hot encoded en una pieza.
         ## Parameters
 

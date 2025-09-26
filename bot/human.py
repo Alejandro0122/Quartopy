@@ -29,7 +29,7 @@ class Quarto_bot(BotAI):
 
         assert valid_moves, "No valid moves available in storage."
 
-        print(*zip(range(len(valid_pieces)), valid_pieces), sep="\n")
+        print("\n", *zip(range(len(valid_pieces)), valid_pieces), sep="\n")
         option = input(f"Select a piece by number [0-{len(valid_moves)-1}]: ")
         try:
             option = int(option)

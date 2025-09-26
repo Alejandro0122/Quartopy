@@ -1,6 +1,6 @@
 [project]
 name = "quartopy"
-version = "0.7.0"
+version = "1.1.0"
 description = "Juego Quarto con CLI y bots"
 authors = [
     { name="Jonathan Zea" },
