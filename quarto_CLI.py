@@ -17,7 +17,7 @@ logger.debug(f"{__name__} importado correctamente")
 @click.option(
     "--player2",
     default="random_bot",
-    type=click.Choice(["random_bot"], case_sensitive=False),
+    type=click.Choice(["random_bot", "human"], case_sensitive=False),
     help="nombre del script del jugador 2 (ej. random_bot)",
 )
 @click.option(
