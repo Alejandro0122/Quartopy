@@ -47,6 +47,7 @@ class MainWindow(QMainWindow):
         # Conexión para el botón Salir del Menú
         self.menu_screen.btn_exit.clicked.connect(self.close)
         self.start_screen.exit_button.clicked.connect(self.close)
+        self.game_board.btn_exit.clicked.connect(self.close)
 
         # Conexión para el botón Jugar del Menú
         self.menu_screen.btn_play.clicked.connect(self.show_game)
