@@ -1,6 +1,5 @@
-# quarto_py/gui/main_window.py
-
-from PyQt5.QtWidgets import QMainWindow, QStackedWidget
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QMainWindow, QStackedWidget, QWidget, QLabel
 from .screens.start_screen import StartScreen
 from .screens.menu_screen import MenuScreen
 from .screens.game_board import GameBoard
@@ -13,8 +12,19 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
+        self.setWindowFlags(Qt.FramelessWindowHint)
+
         self.setWindowTitle('Juego Quarto')
-        self.setGeometry(100, 100, 600, 500)
+        self.setGeometry(180, 150, 1000, 500)
+
+        self.title_bar = QWidget(self)
+        self.title_bar.setGeometry(0, 0, self.width(), 30)
+        self.title_bar.setStyleSheet("background-color: black;")
+        
+        # 4. Colocar el título del juego en esta barra
+        self.custom_title_label = QLabel("Juego Quarto", self.title_bar)
+        self.custom_title_label.setStyleSheet("color: white; font-weight: bold;")
+        self.custom_title_label.move(5, 5) # Pequeño margen
         
         # Crea el QStackedWidget que contendrá todas las pantallas
         self.stacked_widget = QStackedWidget()
@@ -36,12 +46,17 @@ class MainWindow(QMainWindow):
         
         # Conexión para el botón Salir del Menú
         self.menu_screen.btn_exit.clicked.connect(self.close)
+        self.start_screen.exit_button.clicked.connect(self.close)
 
         # Conexión para el botón Jugar del Menú
         self.menu_screen.btn_play.clicked.connect(self.show_game)
 
         # Muestra la pantalla inicial al comenzar
         self.stacked_widget.setCurrentIndex(0) # Muestra la StartScreen
+
+        # Conexión para video de reglas
+        self.menu_screen.btn_rules.clicked.connect(self.video_rules)
+        
 
     def show_menu(self):
         """Muestra la pantalla del menú (Índice 1)."""
@@ -55,5 +70,9 @@ class MainWindow(QMainWindow):
         """Muestra la pantalla del tablero de juego (Índice 2)."""
         self.stacked_widget.setCurrentIndex(2)
 
+    def video_rules(self):
+        """Muestra las reglas del juego en un video."""
+        import webbrowser
+        webbrowser.open('https://www.tiktok.com/@silvermangaming/video/7442747523795520823')  # Reemplaza con el enlace correcto
         
     # (A futuro, aquí pondremos métodos para show_game, show_rules, etc.)
