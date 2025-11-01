@@ -96,16 +96,16 @@ class CellItem(QGraphicsRectItem):
         # Tamaño de celda
         self.setRect(QRectF(0, 0, 100, 100))
         self.setPen(QPen(QColor("#efb810"), 2))
-        self.setBrush(QColor("#3D3030"))
+        self.setBrush(QColor("#000000"))
 
         self.setAcceptHoverEvents(True)
 
     def hoverEnterEvent(self, event):
-        self.setBrush(QColor("#5a4040"))
+        self.setBrush(QColor("#FFD700"))
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
-        self.setBrush(QColor("#3D3030"))
+        self.setBrush(QColor("#000000"))
         super().hoverLeaveEvent(event)
 
     def mousePressEvent(self, event):
@@ -134,7 +134,7 @@ class GameBoard(QWidget):
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.view.setAlignment(Qt.AlignCenter)
-        self.view.setStyleSheet("background-color: #222; border: none;")
+        self.view.setStyleSheet("background-color: #0F0A07 ; border: none;")
         layout.addWidget(self.view)
 
         # --- Tablero ---
@@ -187,7 +187,7 @@ class GameBoard(QWidget):
         """Crea un contenedor simple sin rotación"""
         container = QGraphicsRectItem(0, 0, w, h)
         container.setPen(QPen(QColor("#FFD700"), 3))
-        container.setBrush(QColor(60, 60, 60, 180))
+        container.setBrush(QColor(0, 0, 0, 180))
         container.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
         container.setPos(x, y)
         self.scene.addItem(container)
@@ -197,7 +197,7 @@ class GameBoard(QWidget):
         """Crea un contenedor con opción de rotación"""
         container = QGraphicsRectItem(0, 0, w, h)
         container.setPen(QPen(QColor("#FFD700"), 2))
-        container.setBrush(QColor(60, 60, 60, 180))
+        container.setBrush(QColor(0, 0, 0, 180))
         container.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
         container.setPos(x, y)
         self.scene.addItem(container)
@@ -212,16 +212,6 @@ class GameBoard(QWidget):
         for j in range(3):
             line = self.scene.addLine(0, j * 60, w, j * 60, QPen(QColor("#FFD700"), 1))
             line.setParentItem(container)
-            
-        # Añadir etiqueta
-        if label:
-            label_item = QGraphicsSimpleTextItem(label)
-            label_item.setBrush(QColor("#FFFFFF"))
-            label_item.setParentItem(container)
-            if rotate:
-                label_item.setPos(-30, h + 20)
-            else:
-                label_item.setPos(5, h + 5)
                 
         return container
 
@@ -301,13 +291,13 @@ class GameBoard(QWidget):
             
     def update_cell_visual(self, row, col):
         cell = self.cells[row][col]
-        cell.setBrush(QColor("#88c999"))
+        cell.setBrush(QColor("#9c9a17"))
 
     def reset_board(self):
         self.logic_board = Board(name="game", storage=False, rows=4, cols=4)
         for row in self.cells:
             for cell in row:
-                cell.setBrush(QColor("#3D3030"))
+                cell.setBrush(QColor("#4C4D4A"))
 
 
 if __name__ == '__main__':
