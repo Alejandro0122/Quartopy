@@ -34,7 +34,8 @@ class MainWindow(QMainWindow):
         self.start_screen = StartScreen()
         self.menu_screen = MenuScreen()
         self.game_board = GameBoard()
-        
+   
+
         # Añade las pantallas al StackedWidget
         # Guardamos un índice para referenciar cada pantalla:
         self.stacked_widget.addWidget(self.start_screen) # Índice 0: Pantalla de Inicio
@@ -69,7 +70,14 @@ class MainWindow(QMainWindow):
 
     def show_game(self):
         """Muestra la pantalla del tablero de juego (Índice 2)."""
+        self.setFixedSize(930, 600)
+        self.move(250, 100)
         self.stacked_widget.setCurrentIndex(2)
+        if self.game_board and hasattr(self.game_board, 'view'):
+            # Desactiva la barra de desplazamiento horizontal
+            self.game_board.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            # Desactiva la barra de desplazamiento vertical
+            self.game_board.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def video_rules(self):
         """Muestra las reglas del juego en un video."""

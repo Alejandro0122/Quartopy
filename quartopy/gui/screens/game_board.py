@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGraphicsView, QGraphicsScene,
-    QGraphicsRectItem, QMessageBox, QPushButton, QGraphicsPixmapItem
+    QGraphicsRectItem, QMessageBox, QPushButton, QGraphicsPixmapItem,
+    QGraphicsItem, QGraphicsSimpleTextItem
 )
 from PyQt5.QtGui import QPen, QColor, QPixmap, QPainter
 from PyQt5.QtCore import Qt, QRectF, QPointF
+import sys 
 
 from game.board import Board
 from game.piece import Piece, Size, Coloration, Shape, Hole
@@ -13,22 +15,72 @@ from game.piece import Piece, Size, Coloration, Shape, Hole
 # 🔷 Clase PieceItem (pieza movible con imagen)
 # ================================================================
 class PieceItem(QGraphicsPixmapItem):
-    def __init__(self, piece: Piece, image_path: str):
+    def __init__(self, piece: Piece, image_path: str, parent_board: QWidget): 
         super().__init__()
         self.piece = piece
+        self.parent_board = parent_board 
         self.setPixmap(QPixmap(image_path).scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         self.setFlag(QGraphicsPixmapItem.ItemIsMovable, True)
         self.setFlag(QGraphicsPixmapItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsPixmapItem.ItemSendsScenePositionChanges, True)
         self.setCursor(Qt.OpenHandCursor)
+        
+        # Estado de la pieza
+        self.is_in_container_3_or_4 = False
+        self.original_container = None
+        self.original_position = QPointF(0, 0)
 
     def mousePressEvent(self, event):
+        # Solo guardar el estado original si no está ya en container3/4
+        if not self.is_in_container_3_or_4:
+            self.original_container = self.parentItem()
+            self.original_position = self.pos()
+        
         self.setCursor(Qt.ClosedHandCursor)
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
         self.setCursor(Qt.OpenHandCursor)
+        
+        # Obtener la posición actual en la escena
+        current_scene_pos = self.scenePos()
+        
+        # Verificar colisión con container3
+        container3_rect = self.parent_board.container3.sceneBoundingRect()
+        in_container3 = container3_rect.contains(current_scene_pos)
+        
+        # Verificar colisión con container4
+        container4_rect = self.parent_board.container4.sceneBoundingRect()
+        in_container4 = container4_rect.contains(current_scene_pos)
+        
+        if in_container3:
+            self.place_in_container(self.parent_board.container3)
+            self.is_in_container_3_or_4 = True
+            
+        elif in_container4:
+            self.place_in_container(self.parent_board.container4)
+            self.is_in_container_3_or_4 = True
+            
+        else:
+            # Si no está en container3/4, regresar al original
+            if self.original_container and not self.is_in_container_3_or_4:
+                self.setParentItem(self.original_container)
+                self.setPos(self.original_position)
+            # Si ya estaba en container3/4 pero se soltó fuera, dejarla donde está
+        
         super().mouseReleaseEvent(event)
+    
+    def place_in_container(self, container):
+        """Coloca la pieza centrada en el contenedor especificado"""
+        # Calcular posición centrada
+        container_rect = container.boundingRect()
+        piece_rect = self.boundingRect()
+        
+        center_x = (container_rect.width() - piece_rect.width()) / 2
+        center_y = (container_rect.height() - piece_rect.height()) / 2
+        
+        self.setParentItem(container)
+        self.setPos(center_x, center_y)
 
 
 # ================================================================
@@ -67,14 +119,13 @@ class CellItem(QGraphicsRectItem):
 class GameBoard(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Quarto - Tablero de Juego")
 
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.setStyleSheet("background-color: black;")
 
-        title_label = QLabel("TABLERO DE JUEGO QUARTO")
-        title_label.setStyleSheet("font-size: 26pt; font-weight: bold; color: green;")
+        title_label = QLabel("QUARTO")
+        title_label.setStyleSheet("background-color: white; font-size: 16pt; font-weight: bold; color: black;")
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
 
@@ -107,38 +158,52 @@ class GameBoard(QWidget):
         """)
         self.btn_exit.resize(100, 60)
         self.btn_exit.raise_()
-        self.btn_exit.move(850, 370)
+        self.btn_exit.move(800, 500)
 
         # --- Contenedores ---
         cell_size = 60
         container_width = 4 * cell_size
         container_height = 2 * cell_size
 
-        self.container1 = self.create_container(0, 100, container_width, container_height)
-        self.container2 = self.create_container(535, 100, container_width, container_height)
+        # Crear contenedores principales (1 y 2)
+        self.container1 = self.create_container(0, 250, container_width, container_height, rotate=False)
+        self.container2 = self.create_container(675, 250, container_width, container_height, rotate=False)
+
+        # Contenedores de destino (3 y 4)
+        self.container3 = self.create_simple_container(90, 100, 70, 70)
+        self.container4 = self.create_simple_container(765, 100, 70, 70)
 
         # --- Lógica del tablero ---
         self.logic_board = Board(name="game", storage=False, rows=4, cols=4)
 
-        # --- Etiqueta de estado ---
-        self.status_label = QLabel("Selecciona una celda para colocar una pieza.")
-        self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setStyleSheet("font-size: 14pt; color: white; margin-top: 10px;")
-        layout.addWidget(self.status_label)
-
-        # --- Crear piezas de ejemplo ---
-        self.create_example_pieces()
+        # --- Crear TODAS las piezas ---
+        self.create_all_pieces()
+        
+        # Ajustar vista de la escena para ver todo
+        self.scene.setSceneRect(0, 0, 1000, 700)
 
     # ================================================================
-    def create_container(self, x, y, w, h):
-        """Crea un contenedor con cuadrícula dorada."""
+    def create_simple_container(self, x, y, w, h):
+        """Crea un contenedor simple sin rotación"""
+        container = QGraphicsRectItem(0, 0, w, h)
+        container.setPen(QPen(QColor("#FFD700"), 3))
+        container.setBrush(QColor(60, 60, 60, 180))
+        container.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
+        container.setPos(x, y)
+        self.scene.addItem(container)
+        return container
+
+    def create_container(self, x, y, w, h, rotate=True, label=""):
+        """Crea un contenedor con opción de rotación"""
         container = QGraphicsRectItem(0, 0, w, h)
         container.setPen(QPen(QColor("#FFD700"), 2))
         container.setBrush(QColor(60, 60, 60, 180))
         container.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
         container.setPos(x, y)
         self.scene.addItem(container)
-        container.setRotation(90)
+        
+        if rotate:
+            container.setRotation(90)
 
         # Líneas de cuadrícula
         for i in range(5):
@@ -147,107 +212,66 @@ class GameBoard(QWidget):
         for j in range(3):
             line = self.scene.addLine(0, j * 60, w, j * 60, QPen(QColor("#FFD700"), 1))
             line.setParentItem(container)
+            
+        # Añadir etiqueta
+        if label:
+            label_item = QGraphicsSimpleTextItem(label)
+            label_item.setBrush(QColor("#FFFFFF"))
+            label_item.setParentItem(container)
+            if rotate:
+                label_item.setPos(-30, h + 20)
+            else:
+                label_item.setPos(5, h + 5)
+                
         return container
 
     # ================================================================
-    def create_example_pieces(self):
-        """Crea dos piezas movibles dentro de los contenedores."""
-        piece1 = Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT)
-        piece2 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece3 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece4 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece5 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece6 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece7 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece8 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece9 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece10 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece11 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece12 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece13 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece14 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece15 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-        piece16 = Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH)
-
-        # Usa tus imágenes PNG (ajusta las rutas a tu carpeta "images/")
-        piece1_item = PieceItem(piece1, "Quartopy/quartopy/gui/assets/images/pieza2.png")
-        piece2_item = PieceItem(piece2, "Quartopy/quartopy/gui/assets/images/pieza1.png")
-        piece3_item = PieceItem(piece3, "Quartopy/quartopy/gui/assets/images/doradacir.png")
-        piece4_item = PieceItem(piece4, "Quartopy/quartopy/gui/assets/images/pieza3.png")
-        piece5_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/pieza4.png")
-        piece6_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/pieza5.png")
-        piece7_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c1.png")
-        piece8_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c2.png")
-        piece9_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c3.png")
-        piece10_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c4.png")
-        piece11_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c5.png")
-        piece12_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c6.png")
-        piece13_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c7.png")
-        piece14_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c8.png")
-        piece15_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c9.png")
-        piece16_item = PieceItem(piece5, "Quartopy/quartopy/gui/assets/images/c10.png")
-
-        # Posición inicial dentro de los contenedores
-        piece1_item.setPos(0, 0)
-        piece2_item.setPos(60, 0)
-        piece3_item.setPos(120, 0)
-        piece4_item.setPos(180, 0)
-        piece5_item.setPos(0, 60)
-        piece6_item.setPos(60, 60)
-        piece15_item.setPos(120, 60)
-        piece16_item.setPos(180, 60)
+    def create_all_pieces(self):
+        """Crea las 16 piezas completas del juego Quarto"""
+        # Lista de todas las piezas con sus propiedades y posiciones iniciales
+        pieces_data = [
+            # Piezas negras - Container 1
+            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/bc0.png", 0, 0, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/bc1.png", 60, 0, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/bc2.png", 120, 0, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/bc3.png", 180, 0, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/bs0.png", 0, 60, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/bs1.png", 60, 60, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/bs2.png", 120, 60, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/bs3.png", 180, 60, self.container1),
+            
+            # Piezas blancas - Container 2
+            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/gc0.png", 0, 0, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/gc1.png", 60, 0, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/gc2.png", 120, 0, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/gc3.png", 180, 0, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/gs0.png", 0, 60, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/gs1.png", 60, 60, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/gs2.png", 120, 60, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/gs3.png", 180, 60, self.container2),
+        ]
         
-        piece7_item.setPos(0, 0)
-        piece8_item.setPos(60, 0)
-        piece9_item.setPos(120, 0)
-        piece10_item.setPos(180, 0)
-        piece11_item.setPos(0, 60)
-        piece12_item.setPos(60, 60)
-        piece13_item.setPos(120, 60)
-        piece14_item.setPos(180, 60)
-
-        # Añadir a la escena (dentro del contenedor 1)
-        piece1_item.setParentItem(self.container1)
-        piece2_item.setParentItem(self.container1)
-        piece3_item.setParentItem(self.container1)
-        piece4_item.setParentItem(self.container1)
-        piece5_item.setParentItem(self.container1)
-        piece6_item.setParentItem(self.container1)
-        piece7_item.setParentItem(self.container2)
-        piece8_item.setParentItem(self.container2)
-        piece9_item.setParentItem(self.container2)
-        piece10_item.setParentItem(self.container2)
-        piece11_item.setParentItem(self.container2)
-        piece12_item.setParentItem(self.container2)
-        piece13_item.setParentItem(self.container2)
-        piece14_item.setParentItem(self.container2)
-        piece15_item.setParentItem(self.container1)
-        piece16_item.setParentItem(self.container1)
-        
-        self.scene.addItem(piece1_item)
-        self.scene.addItem(piece2_item)
-        self.scene.addItem(piece3_item)
-        self.scene.addItem(piece4_item)
-        self.scene.addItem(piece5_item)
-        self.scene.addItem(piece6_item)
-        self.scene.addItem(piece7_item)
-        self.scene.addItem(piece8_item)
-        self.scene.addItem(piece9_item)
-        self.scene.addItem(piece10_item)
-        self.scene.addItem(piece11_item)
-        self.scene.addItem(piece12_item)
-        self.scene.addItem(piece13_item)
-        self.scene.addItem(piece14_item)
-        self.scene.addItem(piece15_item)
-        self.scene.addItem(piece16_item)
+        # Crear todas las piezas
+        self.piece_items = []
+        for piece, image_path, x, y, container in pieces_data:
+            piece_item = PieceItem(piece, image_path, self)
+            piece_item.setPos(x, y)
+            piece_item.setParentItem(container)
+            
+            # Inicializar estado original
+            piece_item.original_container = container
+            piece_item.original_position = QPointF(x, y)
+            
+            self.scene.addItem(piece_item)
+            self.piece_items.append(piece_item)
 
     # ================================================================
     def create_board_grid(self):
         """Crea la cuadrícula principal del tablero 4x4."""
         cell_size = 100
         spacing = 5
-        start_x = 0
-        start_y = 0
+        start_x = 250  # Posición central para el tablero
+        start_y = 100
 
         for row in range(4):
             row_cells = []
@@ -259,10 +283,6 @@ class GameBoard(QWidget):
                 self.scene.addItem(cell)
                 row_cells.append(cell)
             self.cells.append(row_cells)
-
-        total_width = 4 * cell_size + 3 * spacing
-        total_height = 4 * cell_size + 3 * spacing
-        self.scene.setSceneRect(0, 0, total_width, total_height)
 
     # ================================================================
     def handle_cell_click(self, row, col):
@@ -278,10 +298,7 @@ class GameBoard(QWidget):
 
         if self.logic_board.check_win():
             QMessageBox.information(self, "¡Victoria!", "🎉 ¡Has ganado el juego!")
-            self.status_label.setText("Fin del juego - ¡Ganaste!")
-        else:
-            self.status_label.setText(f"Pieza colocada en ({row}, {col})")
-
+            
     def update_cell_visual(self, row, col):
         cell = self.cells[row][col]
         cell.setBrush(QColor("#88c999"))
@@ -291,4 +308,14 @@ class GameBoard(QWidget):
         for row in self.cells:
             for cell in row:
                 cell.setBrush(QColor("#3D3030"))
-        self.status_label.setText("Tablero reiniciado.")
+
+
+if __name__ == '__main__':
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    window = GameBoard()
+    window.setWindowTitle("Quarto - Juego Completo")
+    window.resize(1000, 700)
+    window.show()
+    sys.exit(app.exec_())
