@@ -2,9 +2,9 @@ from asyncio.log import logger
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGraphicsView, QGraphicsScene,
     QGraphicsRectItem, QMessageBox, QPushButton, QGraphicsPixmapItem,
-    QGraphicsItem, QGraphicsSimpleTextItem
+    QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsTextItem
 )
-from PyQt5.QtGui import QPen, QColor, QPixmap, QPainter
+from PyQt5.QtGui import QPen, QColor, QPixmap, QPainter, QFont
 from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer
 import sys 
 import math
@@ -114,6 +114,7 @@ class PieceItem(QGraphicsPixmapItem):
                 # Cambiar fase y activar el turno del bot
                 self.parent_board.human_action_phase = "IDLE"
                 self.parent_board.current_turn = "BOT"
+                self.parent_board.update_turn_display()  # Actualizar display
                 game.cambiar_turno()
                 QTimer.singleShot(500, self.parent_board.handle_bot_turn)
             else:
@@ -138,6 +139,7 @@ class PieceItem(QGraphicsPixmapItem):
                     if self.parent_board.logic_board.check_win():
                         self.parent_board.human_action_phase = "IDLE"
                         self.parent_board.current_turn = "GAME_OVER"
+                        self.parent_board.update_turn_display()  # Actualizar display
                         QMessageBox.information(self.parent_board, "¡Victoria!", "🎉 ¡Has ganado el juego!")
                         return
                     
@@ -149,12 +151,14 @@ class PieceItem(QGraphicsPixmapItem):
                     if self.parent_board.logic_board.is_full():
                         self.parent_board.human_action_phase = "IDLE"
                         self.parent_board.current_turn = "GAME_OVER"
+                        self.parent_board.update_turn_display()  # Actualizar display
                         QMessageBox.information(self.parent_board, "¡Empate!", "El tablero está lleno, ¡es un empate!")
                         return
                     
                     # Cambiar a fase inicial para siguiente ronda
                     self.parent_board.human_action_phase = "PICK_TO_C4"
                     self.parent_board.current_turn = "HUMAN"
+                    self.parent_board.update_turn_display()  # Actualizar display
                     game.cambiar_turno()
                 else:
                     self.return_to_original()
@@ -309,6 +313,9 @@ class GameBoard(QWidget):
         self.container3 = self.create_simple_container(90, 100, 70, 70)
         self.container4 = self.create_simple_container(765, 100, 70, 70)
 
+        # --- Display de turno ---
+        self.create_turn_display()
+
         # --- Lógica del tablero ---
         # Creación de los jugadores
         self.human_player = Human_bot()
@@ -329,6 +336,54 @@ class GameBoard(QWidget):
 
         # Radio de atracción a las celdas
         self.snap_distance = 80
+
+    # ================================================================
+    def create_turn_display(self):
+        """Crea el display que muestra de quién es el turno"""
+        # Crear rectángulo de fondo
+        self.turn_display_bg = QGraphicsRectItem(0, 0, 100, 60)
+        self.turn_display_bg.setPen(QPen(QColor("#FFD700"), 2))
+        self.turn_display_bg.setBrush(QColor(0, 0, 0, 200))
+        self.turn_display_bg.setPos(405, 30)
+        self.scene.addItem(self.turn_display_bg)
+        
+        # Crear texto
+        self.turn_display_text = QGraphicsTextItem("  TURNO")
+        self.turn_display_text.setDefaultTextColor(QColor("#FFD700"))
+        font = QFont("Arial", 12, QFont.Bold)
+        self.turn_display_text.setFont(font)
+        self.turn_display_text.setPos(415, 35)
+        self.scene.addItem(self.turn_display_text)
+        
+        # Crear texto para el jugador actual
+        self.current_player_text = QGraphicsTextItem("Humano")
+        self.current_player_text.setDefaultTextColor(QColor("#FFFFFF"))
+        font = QFont("Arial", 14, QFont.Bold)
+        self.current_player_text.setFont(font)
+        self.current_player_text.setPos(415, 55)
+        self.scene.addItem(self.current_player_text)
+
+    def update_turn_display(self):
+        """Actualiza el display del turno según el estado actual"""
+        if self.current_turn == "HUMAN":
+            self.current_player_text.setPlainText("Humano")
+            self.current_player_text.setDefaultTextColor(QColor("#4CAF50"))  # Verde
+            # Actualizar color de fondo según fase
+            if self.human_action_phase == "PICK_TO_C4":
+                self.turn_display_bg.setBrush(QColor(76, 175, 80, 150))  # Verde transparente
+            elif self.human_action_phase == "PLACE_FROM_C3":
+                self.turn_display_bg.setBrush(QColor(255, 193, 7, 150))  # Amarillo transparente
+        elif self.current_turn == "BOT":
+            self.current_player_text.setPlainText("    Bot")
+            self.current_player_text.setDefaultTextColor(QColor("#F44336"))  # Rojo
+            self.turn_display_bg.setBrush(QColor(244, 67, 54, 150))  # Rojo transparente
+        elif self.current_turn == "GAME_OVER":
+            self.current_player_text.setPlainText("Fin")
+            self.current_player_text.setDefaultTextColor(QColor("#9E9E9E"))  # Gris
+            self.turn_display_bg.setBrush(QColor(158, 158, 158, 150))  # Gris transparente
+        
+        # Forzar actualización de la escena
+        self.scene.update()
 
     # ================================================================
     def find_closest_cell(self, scene_pos: QPointF):
@@ -537,6 +592,7 @@ class GameBoard(QWidget):
         self.human_action_phase = "PICK_TO_C4"
         self.selected_piece_for_c3 = None
         self.current_turn = "HUMAN"
+        self.update_turn_display()
 
     # ================================================================
     def handle_bot_turn(self):
@@ -547,6 +603,7 @@ class GameBoard(QWidget):
             print(f"[DEBUG] Not bot's turn, current_turn: {self.current_turn}")
             return
             
+        self.update_turn_display()  # Actualizar display
         QTimer.singleShot(300, self._execute_bot_turn)
     
     def _execute_bot_turn(self):
@@ -603,9 +660,9 @@ class GameBoard(QWidget):
             # Verificar si hay victoria
             if self.logic_board.check_win():
                 print("[DEBUG] Bot won!")
-                QMessageBox.information(self, "¡Victoria!", "🎉 ¡El bot ha ganado!")
-                self.human_action_phase = "IDLE"
                 self.current_turn = "GAME_OVER"
+                self.update_turn_display()
+                QMessageBox.information(self, "¡Victoria!", "🎉 ¡El bot ha ganado!")
                 return
             
             # Verificar si quedan piezas disponibles
@@ -627,12 +684,15 @@ class GameBoard(QWidget):
         """Maneja el fin del juego cuando no hay más piezas"""
         print("[DEBUG] Game ended - no more pieces")
         if self.logic_board.check_win():
+            self.current_turn = "GAME_OVER"
+            self.update_turn_display()
             QMessageBox.information(self, "¡Victoria!", "🎉 ¡El bot ha ganado!")
         else:
+            self.current_turn = "GAME_OVER"
+            self.update_turn_display()
             QMessageBox.information(self, "¡Fin del juego!", "No hay más piezas disponibles. ¡Es un empate!")
         
         self.human_action_phase = "IDLE"
-        self.current_turn = "GAME_OVER"
     
     def _bot_select_for_c3(self):
         """El bot selecciona una pieza para container3"""
@@ -705,6 +765,7 @@ class GameBoard(QWidget):
             
             self.human_action_phase = "PLACE_FROM_C3"
             self.current_turn = "HUMAN"
+            self.update_turn_display()
             
             # Actualizar la interfaz
             self.update()
@@ -730,6 +791,7 @@ class GameBoard(QWidget):
                             game.cambiar_turno()
                             self.human_action_phase = "PLACE_FROM_C3"
                             self.current_turn = "HUMAN"
+                            self.update_turn_display()
                             self.update()
                             print(f"[DEBUG] Used fallback piece: {piece}")
                             return
