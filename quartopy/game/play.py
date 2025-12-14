@@ -1,6 +1,6 @@
 from ..utils import logger
 from ..models import load_bot_class
-from ..game.quarto_game import QuartoGame
+from .quarto_game import QuartoGame
 from ..models import BotAI
 
 import time

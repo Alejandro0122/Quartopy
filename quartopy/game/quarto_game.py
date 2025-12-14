@@ -136,6 +136,7 @@ class QuartoGame:
             self.turn = not self.turn
         self.pick = not self.pick
 
+
     def export_history_to_csv(
         self, output_folder: str = "./partidas_guardadas/", match_number: int = 1
     ):

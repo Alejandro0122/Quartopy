@@ -1,8 +1,8 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QStackedWidget, QWidget, QLabel
-from .screens.start_screen import StartScreen
-from .screens.menu_screen import MenuScreen
-from .screens.game_board import GameBoard
+from quartopy.gui.screens.start_screen import StartScreen
+from quartopy.gui.screens.menu_screen import MenuScreen
+from quartopy.gui.screens.game_board import GameBoard
 
 class MainWindow(QMainWindow):
     """
