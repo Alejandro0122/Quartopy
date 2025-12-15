@@ -11,8 +11,8 @@ import math
 
 from quartopy.game.board import Board
 from quartopy.game.piece import Piece, Size, Coloration, Shape, Hole
-from quartopy.bot.human import Human_bot
-from quartopy.bot.random_bot import Random_bot
+from quartopy.bot.human import  Quarto_bot
+from quartopy.bot.random_bot import  Quarto_bot
 from quartopy.game.quarto_game import QuartoGame
 
 # ================================================================
@@ -318,8 +318,8 @@ class GameBoard(QWidget):
 
         # --- Lógica del tablero ---
         # Creación de los jugadores
-        self.human_player = Human_bot()
-        self.bot_player = Random_bot()
+        self.human_player =  Quarto_bot()
+        self.bot_player =  Quarto_bot()
         self.quarto_game = QuartoGame(player1=self.human_player, player2=self.bot_player)
         self.logic_board = self.quarto_game.game_board
 
@@ -614,9 +614,9 @@ class GameBoard(QWidget):
         current_player = game.get_current_player()
         
         print(f"[DEBUG] Current player type: {type(current_player)}")
-        print(f"[DEBUG] Is Random_bot? {isinstance(current_player, Random_bot)}")
+        print(f"[DEBUG] Is Random_bot? {isinstance(current_player,  Quarto_bot)}")
         
-        if not isinstance(current_player, Random_bot):
+        if not isinstance(current_player,  Quarto_bot):
             print("[DEBUG] Not bot's turn according to game logic")
             return
         
