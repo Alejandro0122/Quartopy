@@ -1,6 +1,7 @@
 import sys
+from os import path                                                                              
+sys.path.insert(0, path.dirname(path.dirname(path.abspath(__file__)))) 
 from PyQt5.QtWidgets import QApplication
-
 from gui.main_window import MainWindow 
 
 def main():
