@@ -61,10 +61,10 @@ class MenuScreen(QWidget):
         self.btn_play.setStyleSheet(btn_style)
 
         # Botón 2: Multijugador
-        self.btn_multiplayer = QPushButton('Multijugador Local', self)
-        self.btn_multiplayer.resize(300, 60)
-        self.btn_multiplayer.move(pocy, 265)
-        self.btn_multiplayer.setStyleSheet(btn_style)
+        self.btn_record = QPushButton('Tabla de puntajes', self)
+        self.btn_record.resize(300, 60)
+        self.btn_record.move(pocy, 265)
+        self.btn_record.setStyleSheet(btn_style)
 
         # Botón 3: Reglas
         self.btn_rules = QPushButton('Reglas del Juego', self)

@@ -3,6 +3,8 @@ from PyQt5.QtWidgets import QMainWindow, QStackedWidget, QWidget, QLabel
 from quartopy.gui.screens.start_screen import StartScreen
 from quartopy.gui.screens.menu_screen import MenuScreen
 from quartopy.gui.screens.game_board import GameBoard
+from quartopy.gui.screens.type_player import TypePlayerScreen
+from quartopy.gui.screens.record_screen import RecordScreen
 
 class MainWindow(QMainWindow):
     """
@@ -34,7 +36,8 @@ class MainWindow(QMainWindow):
         self.start_screen = StartScreen()
         self.menu_screen = MenuScreen()
         self.game_board = GameBoard()
-   
+        self.type_player = TypePlayerScreen()
+        self.record_screen = RecordScreen()
 
         # Añade las pantallas al StackedWidget
         # Guardamos un índice para referenciar cada pantalla:
@@ -49,9 +52,17 @@ class MainWindow(QMainWindow):
         self.menu_screen.btn_exit.clicked.connect(self.close)
         self.start_screen.exit_button.clicked.connect(self.close)
         self.game_board.btn_exit.clicked.connect(self.close)
+        self.record_screen.back_btn.clicked.connect(self.closeMini)
+        self.type_player.back_btn.clicked.connect(self.closeMini1)
+        self.type_player.start_btn.clicked.connect(self.closeMini1)
 
-        # Conexión para el botón Jugar del Menú
-        self.menu_screen.btn_play.clicked.connect(self.show_game)
+        self.menu_screen.btn_record.clicked.connect(self.record_screen.show)   
+
+        # Conexión para el botón Jugar de tipo de jugador del Menú
+        self.type_player.start_btn.clicked.connect(self.show_game)
+
+        # Conexión para el botón Jugar a selección de tipo de jugador
+        self.menu_screen.btn_play.clicked.connect(self.type_player.show)
 
         # Muestra la pantalla inicial al comenzar
         self.stacked_widget.setCurrentIndex(0) # Muestra la StartScreen
@@ -85,3 +96,12 @@ class MainWindow(QMainWindow):
         webbrowser.open('https://www.tiktok.com/@silvermangaming/video/7442747523795520823')  # Reemplaza con el enlace correcto
         
     # (A futuro, aquí pondremos métodos para show_game, show_rules, etc.)
+
+    def closeMini(self):
+        """Cierra la ventana de records y vuelve al menú principal."""
+        self.record_screen.hide()
+        self.show_menu()
+
+    def closeMini1(self):
+        """Cierra la ventana de records."""
+        self.type_player.hide()
