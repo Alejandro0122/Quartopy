@@ -24,11 +24,6 @@ class  Quarto_bot(BotAI):
 
     def select(self, game: QuartoGame, ith_option: int = 0, *args, **kwargs) -> Piece:
         """Selects a random piece from the storage."""
-        if hasattr(game, 'available_pieces') and game.available_pieces:
-            selected_piece = choice(game.available_pieces)
-            logger.debug(f"RandomBot selected piece: {selected_piece} from available_pieces.")
-            return selected_piece
-            
         valid_moves = game.storage_board.get_valid_moves()
 
         assert valid_moves, "No valid moves available in storage."

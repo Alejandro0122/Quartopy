@@ -1,4 +1,3 @@
-import os
 from asyncio.log import logger
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGraphicsView, QGraphicsScene,
@@ -140,9 +139,8 @@ class PieceItem(QGraphicsPixmapItem):
                     if self.parent_board.logic_board.check_win():
                         self.parent_board.human_action_phase = "IDLE"
                         self.parent_board.current_turn = "GAME_OVER"
-                        self.parent_board.update_turn_display()
+                        self.parent_board.update_turn_display()  # Actualizar display
                         QMessageBox.information(self.parent_board, "¡Victoria!", "🎉 ¡Has ganado el juego!")
-                        self.parent_board.quarto_game.save_game_summary()
                         return
                     
                     # Preparar para siguiente ronda
@@ -153,9 +151,8 @@ class PieceItem(QGraphicsPixmapItem):
                     if self.parent_board.logic_board.is_full():
                         self.parent_board.human_action_phase = "IDLE"
                         self.parent_board.current_turn = "GAME_OVER"
-                        self.parent_board.update_turn_display()
+                        self.parent_board.update_turn_display()  # Actualizar display
                         QMessageBox.information(self.parent_board, "¡Empate!", "El tablero está lleno, ¡es un empate!")
-                        self.parent_board.quarto_game.save_game_summary()
                         return
                     
                     # Cambiar a fase inicial para siguiente ronda
@@ -509,28 +506,27 @@ class GameBoard(QWidget):
     # ================================================================
     def create_all_pieces(self):
         """Crea las 16 piezas completas del juego Quarto"""
-        assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'images'))
         # Lista de todas las piezas con sus propiedades y posiciones iniciales
         pieces_data = [
             # Piezas negras - Container 1
-            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), os.path.join(assets_path, "bc0.png"), 0, 0, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), os.path.join(assets_path, "bc1.png"), 60, 0, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), os.path.join(assets_path, "bc2.png"), 120, 0, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), os.path.join(assets_path, "bc3.png"), 180, 0, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), os.path.join(assets_path, "bs0.png"), 0, 60, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH), os.path.join(assets_path, "bs1.png"), 60, 60, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), os.path.join(assets_path, "bs2.png"), 120, 60, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH), os.path.join(assets_path, "bs3.png"), 180, 60, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc0.png", 0, 0, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bc1.png", 60, 0, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc2.png", 120, 0, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bc3.png", 180, 0, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs0.png", 0, 60, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bs1.png", 60, 60, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs2.png", 120, 60, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bs3.png", 180, 60, self.container1),
             
             # Piezas blancas - Container 2
-            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), os.path.join(assets_path, "gc0.png"), 0, 0, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), os.path.join(assets_path, "gc1.png"), 60, 0, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), os.path.join(assets_path, "gc2.png"), 120, 0, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), os.path.join(assets_path, "gc3.png"), 180, 0, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), os.path.join(assets_path, "gs0.png"), 0, 60, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITH), os.path.join(assets_path, "gs1.png"), 60, 60, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), os.path.join(assets_path, "gs2.png"), 120, 60, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH), os.path.join(assets_path, "gs3.png"), 180, 60, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc0.png", 0, 0, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gc1.png", 60, 0, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc2.png", 120, 0, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gc3.png", 180, 0, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs0.png", 0, 60, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gs1.png", 60, 60, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs2.png", 120, 60, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gs3.png", 180, 60, self.container2),
         ]
         
         # Crear todas las piezas
@@ -667,7 +663,6 @@ class GameBoard(QWidget):
                 self.current_turn = "GAME_OVER"
                 self.update_turn_display()
                 QMessageBox.information(self, "¡Victoria!", "🎉 ¡El bot ha ganado!")
-                self.quarto_game.save_game_summary()
                 return
             
             # Verificar si quedan piezas disponibles
@@ -697,7 +692,6 @@ class GameBoard(QWidget):
             self.update_turn_display()
             QMessageBox.information(self, "¡Fin del juego!", "No hay más piezas disponibles. ¡Es un empate!")
         
-        self.quarto_game.save_game_summary()
         self.human_action_phase = "IDLE"
     
     def _bot_select_for_c3(self):
@@ -734,7 +728,7 @@ class GameBoard(QWidget):
             print(f"[DEBUG] Bot selected for C3: {selected_piece_for_c3_logic}")
         except Exception as e:
             print(f"[DEBUG] Error selecting piece: {e}")
-            # Si hay error, seleccionar manually la primera disponible
+            # Si hay error, seleccionar manualmente la primera disponible
             selected_piece_for_c3_logic = available_pieces[0] if available_pieces else None
         
         # Restaurar las piezas disponibles originales si existían

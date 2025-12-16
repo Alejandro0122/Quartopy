@@ -128,7 +128,7 @@ def play_games(
         # Aftermath
         if save_match:
             # Exportar historial con número de match
-            game.save_game_summary()
+            game.export_history_to_csv(match_number=match)
 
         win_rate[game.winner_pos] += 1
         matches_data.append(game.to_dict)
