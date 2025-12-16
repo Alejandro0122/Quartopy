@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsTextItem
 )
 from PyQt5.QtGui import QPen, QColor, QPixmap, QPainter, QFont
-from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer
+from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer, pyqtSignal
 import sys 
 import math
 
@@ -257,6 +257,7 @@ class CellItem(QGraphicsRectItem):
 # 🔷 Clase Tablero de Juego (GameBoard)
 # ================================================================
 class GameBoard(QWidget):
+    back_to_menu_signal = pyqtSignal()
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -298,7 +299,27 @@ class GameBoard(QWidget):
         """)
         self.btn_exit.resize(100, 60)
         self.btn_exit.raise_()
-        self.btn_exit.move(800, 500)
+        self.btn_exit.move(800, 530)
+
+        # --- Botón volver al menú ---
+        self.btn_back_to_menu = QPushButton('Volver al Menú', self)
+        self.btn_back_to_menu.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(0, 0, 0, 180);
+                color: white;
+                border: 2px solid white;
+                padding: 15px;
+                font-size: 14pt;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: rgba(50, 50, 50, 200);
+            }
+        """)
+        self.btn_back_to_menu.clicked.connect(self.go_back_to_menu)
+        self.btn_back_to_menu.resize(165, 60)
+        self.btn_back_to_menu.raise_()
+        self.btn_back_to_menu.move(750, 460)
 
         # --- Contenedores ---
         cell_size = 60
@@ -337,7 +358,9 @@ class GameBoard(QWidget):
         # Radio de atracción a las celdas
         self.snap_distance = 80
 
-    # ================================================================
+    def go_back_to_menu(self):
+        self.reset_board()
+        self.back_to_menu_signal.emit()
     def create_turn_display(self):
         """Crea el display que muestra de quién es el turno"""
         # Crear rectángulo de fondo
@@ -817,7 +840,7 @@ if __name__ == '__main__':
 
 # Enlazar cvs con record_screen  MARCO
 
-# Boton regresar al menu en game_board.py (Limpie)  Jairo   
+# Boton regresar al menu en game_board.py (Limpie)  Jairo  X
 
 # Enlazar condiciones de victoria de board.py a game_board.py  Jairo
 

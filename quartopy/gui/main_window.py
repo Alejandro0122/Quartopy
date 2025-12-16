@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.menu_screen.btn_exit.clicked.connect(self.close)
         self.start_screen.exit_button.clicked.connect(self.close)
         self.game_board.btn_exit.clicked.connect(self.close)
+        self.game_board.back_to_menu_signal.connect(self.show_menu)
         self.record_screen.back_btn.clicked.connect(self.closeMini)
         self.type_player.back_btn.clicked.connect(self.closeMini1)
         self.type_player.start_btn.clicked.connect(self.closeMini1)
@@ -73,6 +74,8 @@ class MainWindow(QMainWindow):
 
     def show_menu(self):
         """Muestra la pantalla del menú (Índice 1)."""
+        self.setFixedSize(1000, 500)
+        self.move(180, 150)
         self.stacked_widget.setCurrentIndex(1)
         
     def show_start(self):
