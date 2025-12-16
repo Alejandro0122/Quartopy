@@ -14,7 +14,7 @@ Python 3
 from quartopy import logger, BotAI, Piece, QuartoGame
 
 
-class Human_bot(BotAI):
+class  Quarto_bot(BotAI):
     @property
     def name(self) -> str:
         return "Human_bot"
