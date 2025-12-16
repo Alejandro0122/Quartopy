@@ -14,7 +14,7 @@ from quartopy import logger, BotAI, Piece, QuartoGame
 from random import choice
 
 
-class  Quarto_bot(BotAI):
+class Random_bot(BotAI):
     @property
     def name(self) -> str:
         return "RandomBot"
