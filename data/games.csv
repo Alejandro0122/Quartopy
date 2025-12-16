@@ -1,0 +1,5 @@
+game_id,winner,turns,start_time,end_time,player1_type,player2_type,history
+2025-12-15 23:12:59.883210,Tie,0,2025-12-15 23:12:59,2025-12-15 23:14:40,RandomBot,RandomBot,
+2025-12-15 23:21:22.738416,Tie,0,2025-12-15 23:21:22,2025-12-15 23:22:38,RandomBot,RandomBot,
+2025-12-15 23:23:26.763442,Tie,0,2025-12-15 23:23:26,2025-12-15 23:24:16,RandomBot,RandomBot,
+2025-12-15 23:32:30.141706,Tie,0,2025-12-15 23:32:30,2025-12-15 23:33:24,RandomBot,RandomBot,

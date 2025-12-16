@@ -2,6 +2,7 @@ from .board import Board
 from ..models.Bot import BotAI
 from .piece import Piece
 from ..utils.logger import logger
+from ..utils.game_saver import save_game
 
 from os import path, makedirs
 from datetime import datetime
@@ -28,11 +29,15 @@ class QuartoGame:
         # Configuración de jugadores
         self.player1 = player1
         self.player2 = player2
+        self.player1_type = player1.name
+        self.player2_type = player2.name
 
         self.player_won: bool = False
         self.match_result: str = self.TIE
         self.valid_moves = []
         self.winner_pos: str = self.TIE
+        
+        self.start_time = datetime.now()
 
     def get_current_player(self):
         return self.player1 if self.turn else self.player2
@@ -136,59 +141,23 @@ class QuartoGame:
             self.turn = not self.turn
         self.pick = not self.pick
 
-
-    def export_history_to_csv(
-        self, output_folder: str = "./partidas_guardadas/", match_number: int = 1
-    ):
-        """Exporta el historial a un CSV con nombre que incluye match, fecha y hora"""
-        # Crear directorio si no existe
-        makedirs(output_folder, exist_ok=True)
-
-        # Generar nombre de archivo con formato: MatchX_YYYY-MM-DD_HH-MM-SS.csv
-        current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-        filename = f"{current_time}_match{match_number:03d}.csv"
-
-        filepath = path.join(output_folder, filename)
-
-        with open(filepath, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow(
-                [
-                    "Movimiento",
-                    "Jugador",
-                    "Acción",
-                    "Pieza",
-                    "Pieza Index",
-                    "Posición",
-                    "Posición Index",
-                    "Intento",
-                    "Tablero",
-                ]
-            )
-
-            # Escribir movimientos
-            for i, move in enumerate(self.move_history, start=1):
-                piece = move.get("piece", "N/A")
-                piece_index = move.get("piece_index", "N/A")
-                position = move.get("position", "N/A")
-                position_index = move.get("position_index", "N/A")
-                board = move.get("board_after", "N/A")
-                writer.writerow(
-                    [
-                        i,
-                        move["player_name"],
-                        move["action"],
-                        piece,
-                        piece_index,
-                        position,
-                        position_index,
-                        move["attempt"],
-                        board,
-                    ]
-                )
-
-        return filepath
+    def save_game_summary(self):
+        """Gathers game data and saves it to a CSV file."""
+        end_time = datetime.now()
+        history_str = ";".join([str(move) for move in self.move_history])
+        
+        game_data = {
+            'game_id': str(self.start_time),
+            'winner': self.match_result,
+            'turns': len(self.move_history),
+            'start_time': self.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            'end_time': end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            'player1_type': self.player1_type,
+            'player2_type': self.player2_type,
+            'history': history_str,
+        }
+        
+        save_game(game_data)
 
     def display_boards(self, exclude_footer: bool = False):
         """Muestra ambos tableros con formato mejorado"""
