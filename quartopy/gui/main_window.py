@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         # Inicializa las pantallas
         self.start_screen = StartScreen()
         self.menu_screen = MenuScreen()
-        self.game_board = GameBoard()
+        self.game_board = None # Se creará dinámicamente
         self.type_player = TypePlayerScreen()
         self.record_screen = RecordScreen()
 
@@ -43,24 +43,16 @@ class MainWindow(QMainWindow):
         # Guardamos un índice para referenciar cada pantalla:
         self.stacked_widget.addWidget(self.start_screen) # Índice 0: Pantalla de Inicio
         self.stacked_widget.addWidget(self.menu_screen)  # Índice 1: Pantalla de Menú
-        self.stacked_widget.addWidget(self.game_board)
         
         # Conexiones: Conecta la señal de la pantalla de inicio a la función de navegación
         self.start_screen.start_button.clicked.connect(self.show_menu)
         
         # Conexión para el botón Salir del Menú
         self.menu_screen.btn_exit.clicked.connect(self.close)
-        self.start_screen.exit_button.clicked.connect(self.close)
-        self.game_board.btn_exit.clicked.connect(self.close)
-        self.game_board.back_to_menu_signal.connect(self.show_menu)
+
         self.record_screen.back_btn.clicked.connect(self.closeMini)
         self.type_player.back_btn.clicked.connect(self.closeMini1)
-        self.type_player.start_btn.clicked.connect(self.closeMini1)
-
-        self.menu_screen.btn_record.clicked.connect(self.record_screen.show)   
-
-        # Conexión para el botón Jugar de tipo de jugador del Menú
-        self.type_player.start_btn.clicked.connect(self.show_game)
+        self.type_player.players_selected.connect(self.start_game_with_config)
 
         # Conexión para el botón Jugar a selección de tipo de jugador
         self.menu_screen.btn_play.clicked.connect(self.type_player.show)
@@ -91,6 +83,47 @@ class MainWindow(QMainWindow):
             # Desactiva la barra de desplazamiento horizontal
             self.game_board.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             # Desactiva la barra de desplazamiento vertical
+            self.game_board.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def start_game_with_config(self, config: dict):
+        
+        self.type_player.close()
+        
+        """
+        Crea una nueva instancia de GameBoard con la configuración de jugadores
+        y modo 2x2 seleccionada, y la muestra.
+        """
+        player1_type = config['player1']
+        player2_type = config['player2']
+        mode_2x2 = config['mode_2x2']
+
+        # Remover el GameBoard antiguo si existe
+        if self.game_board:
+            # Asegurarse de que el widget no sea None antes de intentar removerlo
+            if self.stacked_widget.indexOf(self.game_board) != -1:
+                self.stacked_widget.removeWidget(self.game_board)
+            self.game_board.deleteLater() # Asegura que el objeto sea eliminado
+        
+        # Crear nueva instancia de GameBoard con la configuración
+        self.game_board = GameBoard(
+            parent=self, 
+            player1_type=player1_type, 
+            player2_type=player2_type,
+            mode_2x2=mode_2x2
+        )
+        # Re-conectar la señal de salida del GameBoard
+        self.game_board.btn_exit.clicked.connect(self.close)
+        self.game_board.back_to_menu_signal.connect(self.show_menu)
+
+        self.stacked_widget.addWidget(self.game_board)
+        self.stacked_widget.setCurrentWidget(self.game_board) # Mostrar el nuevo GameBoard
+        
+        # Ajustar el tamaño de la ventana para el GameBoard
+        self.setFixedSize(930, 600)
+        self.move(250, 100)
+        
+        if self.game_board and hasattr(self.game_board, 'view'):
+            self.game_board.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.game_board.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def video_rules(self):

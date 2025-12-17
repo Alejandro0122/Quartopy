@@ -11,8 +11,9 @@ import math
 
 from quartopy.game.board import Board
 from quartopy.game.piece import Piece, Size, Coloration, Shape, Hole
-from quartopy.bot.human import  Quarto_bot
-from quartopy.bot.random_bot import  Quarto_bot
+from quartopy.bot.human import Quarto_bot as HumanBot
+from quartopy.bot.random_bot import Quarto_bot as RandomBot
+from quartopy.models.Bot import BotAI
 from quartopy.game.quarto_game import QuartoGame
 
 # ================================================================
@@ -39,7 +40,7 @@ class PieceItem(QGraphicsPixmapItem):
 
     def mousePressEvent(self, event):
         # Solo permitir mover si es el turno del humano en la fase correcta
-        if self.parent_board.human_action_phase == "IDLE":
+        if self.parent_board._get_current_player_type() != 'human':
             event.ignore()
             return
             
@@ -71,7 +72,7 @@ class PieceItem(QGraphicsPixmapItem):
         self.setCursor(Qt.OpenHandCursor)
         
         # Si no es el turno del humano, ignorar
-        if self.parent_board.human_action_phase == "IDLE":
+        if self.parent_board._get_current_player_type() != 'human':
             self.return_to_original()
             super().mouseReleaseEvent(event)
             return
@@ -111,12 +112,23 @@ class PieceItem(QGraphicsPixmapItem):
                 self.is_on_board = False
                 self.current_container = self.parent_board.container4
                 
-                # Cambiar fase y activar el turno del bot
-                self.parent_board.human_action_phase = "IDLE"
-                self.parent_board.current_turn = "BOT"
-                self.parent_board.update_turn_display()  # Actualizar display
-                game.cambiar_turno()
-                QTimer.singleShot(500, self.parent_board.handle_bot_turn)
+                # Actualizar el juego lógico
+                game.selected_piece = self.piece
+                game.cambiar_turno() # Cambia a fase de colocación para el siguiente jugador
+
+                # Determinar quién juega ahora (el oponente)
+                next_player_type = self.parent_board._get_current_player_type()
+                
+                if next_player_type == 'human':
+                    self.parent_board.human_action_phase = "PLACE_FROM_C3"
+                    self.parent_board.selected_piece_for_c3 = self.piece # Set for human
+                    self.parent_board.current_turn = "HUMAN"
+                    self.parent_board.update_turn_display()
+                else: # next_player_type is 'random_bot'
+                    self.parent_board.human_action_phase = "IDLE" # No hay acción humana directa
+                    self.parent_board.current_turn = "BOT"
+                    self.parent_board.update_turn_display()
+                    QTimer.singleShot(500, self.parent_board.handle_bot_turn)
             else:
                 self.return_to_original()
         
@@ -145,8 +157,8 @@ class PieceItem(QGraphicsPixmapItem):
                     
                     # Preparar para siguiente ronda
                     self.parent_board.selected_piece_for_c3 = None
-                    game.selected_piece = None
-                    
+                    game.selected_piece = 0 # Or None, consistent with QuartoGame
+
                     # Verificar si el juego terminó (empate)
                     if self.parent_board.logic_board.is_full():
                         self.parent_board.human_action_phase = "IDLE"
@@ -155,11 +167,21 @@ class PieceItem(QGraphicsPixmapItem):
                         QMessageBox.information(self.parent_board, "¡Empate!", "El tablero está lleno, ¡es un empate!")
                         return
                     
-                    # Cambiar a fase inicial para siguiente ronda
-                    self.parent_board.human_action_phase = "PICK_TO_C4"
-                    self.parent_board.current_turn = "HUMAN"
-                    self.parent_board.update_turn_display()  # Actualizar display
-                    game.cambiar_turno()
+                    # Cambiar el turno lógico del juego para la fase de selección del próximo jugador
+                    game.cambiar_turno() # Ahora el siguiente jugador debe seleccionar una pieza
+                    
+                    # Determinar quién juega ahora
+                    next_player_type = self.parent_board._get_current_player_type()
+                    
+                    if next_player_type == 'human':
+                        self.parent_board.human_action_phase = "PICK_TO_C4"
+                        self.parent_board.current_turn = "HUMAN"
+                        self.parent_board.update_turn_display()
+                    else: # next_player_type is 'random_bot'
+                        self.parent_board.human_action_phase = "IDLE" # No hay acción humana directa
+                        self.parent_board.current_turn = "BOT"
+                        self.parent_board.update_turn_display()
+                        QTimer.singleShot(500, self.parent_board.handle_bot_turn)
                 else:
                     self.return_to_original()
             else:
@@ -258,8 +280,16 @@ class CellItem(QGraphicsRectItem):
 # ================================================================
 class GameBoard(QWidget):
     back_to_menu_signal = pyqtSignal()
-    def __init__(self, parent=None):
+    def __init__(
+        self, 
+        parent=None, 
+        player1_type: str = 'human', 
+        player2_type: str = 'random_bot', 
+        mode_2x2: bool = False
+    ):
         super().__init__(parent)
+        self.player1_type = player1_type
+        self.player2_type = player2_type
 
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -338,16 +368,37 @@ class GameBoard(QWidget):
         self.create_turn_display()
 
         # --- Lógica del tablero ---
-        # Creación de los jugadores
-        self.human_player =  Quarto_bot()
-        self.bot_player =  Quarto_bot()
-        self.quarto_game = QuartoGame(player1=self.human_player, player2=self.bot_player)
+        # Creación de los jugadores dinámicamente
+        self.player1_instance: BotAI
+        if self.player1_type == 'human':
+            self.player1_instance = HumanBot()
+        else: # 'random_bot'
+            self.player1_instance = RandomBot()
+
+        self.player2_instance: BotAI
+        if self.player2_type == 'human':
+            self.player2_instance = HumanBot()
+        else: # 'random_bot'
+            self.player2_instance = RandomBot()
+            
+        self.quarto_game = QuartoGame(
+            player1=self.player1_instance, 
+            player2=self.player2_instance, 
+            mode_2x2=mode_2x2
+        )
         self.logic_board = self.quarto_game.game_board
 
         # Estados del juego
-        self.human_action_phase = "PICK_TO_C4"  # Fase inicial
         self.selected_piece_for_c3 = None
-        self.current_turn = "HUMAN"  # HUMAN, BOT, GAME_OVER
+        self.human_action_phase = "IDLE" # Por defecto, en espera
+        self.current_turn = "IDLE"  # IDLE, HUMAN, BOT, GAME_OVER
+
+        # Determinar el estado inicial del juego basado en el tipo de jugador 1
+        if self.player1_type == 'human':
+            self.human_action_phase = "PICK_TO_C4"
+            self.current_turn = "HUMAN"
+        else: # player1_type is 'random_bot'
+            self.current_turn = "BOT"
 
         # --- Crear TODAS las piezas ---
         self.create_all_pieces()
@@ -357,10 +408,25 @@ class GameBoard(QWidget):
 
         # Radio de atracción a las celdas
         self.snap_distance = 80
+        
+        # Inicializar display de turno
+        self.update_turn_display()
+
+        # Si el jugador 1 es un bot, iniciar su turno automáticamente
+        if self.current_turn == "BOT":
+            QTimer.singleShot(500, self.handle_bot_turn)
 
     def go_back_to_menu(self):
         self.reset_board()
         self.back_to_menu_signal.emit()
+
+    def _get_current_player_type(self) -> str:
+        """Retorna el tipo del jugador actual ('human' o 'random_bot')."""
+        if self.quarto_game.turn: # Player 1
+            return self.player1_type
+        else: # Player 2
+            return self.player2_type
+
     def create_turn_display(self):
         """Crea el display que muestra de quién es el turno"""
         # Crear rectángulo de fondo
@@ -386,10 +452,24 @@ class GameBoard(QWidget):
         self.current_player_text.setPos(415, 55)
         self.scene.addItem(self.current_player_text)
 
+        # Crear namertags para jugador 1
+        self.player1_tag = QGraphicsSimpleTextItem("")
+        self.player1_tag.setFont(font)
+        self.player1_tag.setPos(80, 55)
+        self.scene.addItem(self.player1_tag)
+
+        # Crear namertags para jugador 2
+        self.player2_tag = QGraphicsSimpleTextItem("")
+        self.player2_tag.setFont(font)
+        self.player2_tag.setPos(750, 55)
+        self.scene.addItem(self.player2_tag)
+
     def update_turn_display(self):
         """Actualiza el display del turno según el estado actual"""
+        current_player_logic = self.quarto_game.get_current_player()
+        
         if self.current_turn == "HUMAN":
-            self.current_player_text.setPlainText("Humano")
+            self.current_player_text.setPlainText(f"  {current_player_logic.name}")
             self.current_player_text.setDefaultTextColor(QColor("#4CAF50"))  # Verde
             # Actualizar color de fondo según fase
             if self.human_action_phase == "PICK_TO_C4":
@@ -397,7 +477,7 @@ class GameBoard(QWidget):
             elif self.human_action_phase == "PLACE_FROM_C3":
                 self.turn_display_bg.setBrush(QColor(255, 193, 7, 150))  # Amarillo transparente
         elif self.current_turn == "BOT":
-            self.current_player_text.setPlainText("    Bot")
+            self.current_player_text.setPlainText(f"  {current_player_logic.name}")
             self.current_player_text.setDefaultTextColor(QColor("#F44336"))  # Rojo
             self.turn_display_bg.setBrush(QColor(244, 67, 54, 150))  # Rojo transparente
         elif self.current_turn == "GAME_OVER":
@@ -405,6 +485,21 @@ class GameBoard(QWidget):
             self.current_player_text.setDefaultTextColor(QColor("#9E9E9E"))  # Gris
             self.turn_display_bg.setBrush(QColor(158, 158, 158, 150))  # Gris transparente
         
+        # Actualizar player tags
+        if self.player1_type == 'human':
+            self.player1_tag.setText(f"P1: Humano ({self.quarto_game.player1.name})")
+            self.player1_tag.setBrush(QColor("#4CAF50"))
+        else:
+            self.player1_tag.setText(f"P1: Bot ({self.quarto_game.player1.name})")
+            self.player1_tag.setBrush(QColor("#F44336"))
+
+        if self.player2_type == 'human':
+            self.player2_tag.setText(f"P2: Humano ({self.quarto_game.player2.name})")
+            self.player2_tag.setBrush(QColor("#4CAF50"))
+        else:
+            self.player2_tag.setText(f"P2: Bot ({self.quarto_game.player2.name})")
+            self.player2_tag.setBrush(QColor("#F44336"))
+
         # Forzar actualización de la escena
         self.scene.update()
 
@@ -592,7 +687,11 @@ class GameBoard(QWidget):
 
     def reset_board(self):
         # Limpiar tablero lógico
-        self.quarto_game = QuartoGame(player1=self.human_player, player2=self.bot_player)
+        self.quarto_game = QuartoGame(
+            player1=self.player1_instance, 
+            player2=self.player2_instance,
+            mode_2x2=self.quarto_game.mode_2x2 # Mantener el modo 2x2 original
+        )
         self.logic_board = self.quarto_game.game_board
         
         # Limpiar celdas visuales
@@ -630,45 +729,39 @@ class GameBoard(QWidget):
         QTimer.singleShot(300, self._execute_bot_turn)
     
     def _execute_bot_turn(self):
-        """Ejecuta la lógica del turno del bot"""
+        """Ejecuta la lógica del turno del bot, manejando ambas fases (selección y colocación)."""
         print(f"[DEBUG] _execute_bot_turn - quarto_game.pick: {self.quarto_game.pick}")
         
         game = self.quarto_game
         current_player = game.get_current_player()
         
         print(f"[DEBUG] Current player type: {type(current_player)}")
-        print(f"[DEBUG] Is Random_bot? {isinstance(current_player,  Quarto_bot)}")
         
-        if not isinstance(current_player,  Quarto_bot):
-            print("[DEBUG] Not bot's turn according to game logic")
-            return
-        
-        # Siempre comenzamos con la colocación (porque el humano ya seleccionó una pieza)
-        # El bot debe colocar la pieza que está en container4
-        self._bot_place_piece()
+        # Determine if it's the current player's turn to pick or place
+        if game.pick: # Bot needs to select a piece
+            self._bot_select_piece_for_opponent()
+        else: # Bot needs to place a piece
+            self._bot_place_piece()
     
     def _bot_place_piece(self):
         """El bot coloca una pieza en el tablero"""
         print("[DEBUG] _bot_place_piece")
         
         game = self.quarto_game
+        piece_to_place = game.selected_piece # La pieza ya está seleccionada en la lógica del juego
         
-        # Encontrar la pieza en container4
-        piece_to_place = None
+        # Encontrar el PieceItem correspondiente
         piece_item_to_place = None
-        
         for p_item in self.piece_items:
-            if (p_item.parentItem() == self.container4 and 
-                p_item.is_in_container_3_or_4):
-                piece_to_place = p_item.piece
+            # La pieza a colocar es la que está en game.selected_piece y que no está en el tablero principal
+            if (p_item.piece == piece_to_place and not p_item.is_on_board):
                 piece_item_to_place = p_item
-                print(f"[DEBUG] Found piece in container4: {piece_to_place}")
-                break
-        
-        if not piece_to_place or not piece_item_to_place:
-            print("[DEBUG] No piece found in container4")
+                break        
+        if not piece_item_to_place:
+            print(f"[ERROR] No PieceItem found for selected piece: {piece_to_place}")
+            self._end_game_no_more_pieces() # Manejar este caso de error
             return
-        
+
         # Bot coloca la pieza en el tablero
         print(f"[DEBUG] Bot placing piece: {piece_to_place}")
         row, col = game.get_current_player().place_piece(game, piece_to_place)
@@ -680,28 +773,52 @@ class GameBoard(QWidget):
             piece_item_to_place.board_position = (row, col)
             piece_item_to_place.current_container = None
             
+            # Limpiar container3 si la pieza estaba allí
+            if piece_item_to_place.parentItem() == self.container3:
+                piece_item_to_place.setParentItem(None) # Quitar de container3
+            
             # Verificar si hay victoria
             if self.logic_board.check_win():
                 print("[DEBUG] Bot won!")
                 self.current_turn = "GAME_OVER"
                 self.update_turn_display()
-                QMessageBox.information(self, "¡Victoria!", "🎉 ¡El bot ha ganado!")
+                QMessageBox.information(self, "¡Victoria!", f"🎉 ¡{game.get_current_player().name} ha ganado!")
                 return
             
+            # Resetear la pieza seleccionada en la lógica del juego
+            game.selected_piece = 0 # O None, depende de cómo lo maneje QuartoGame
+
             # Verificar si quedan piezas disponibles
             available_pieces = self.get_available_pieces()
-            print(f"[DEBUG] Available pieces for C3: {len(available_pieces)}")
+            print(f"[DEBUG] Available pieces: {len(available_pieces)}")
             
-            if not available_pieces:
+            if not available_pieces and not self.logic_board.check_win():
                 print("[DEBUG] No more pieces available!")
-                QTimer.singleShot(300, lambda: self._end_game_no_more_pieces())
+                self._end_game_no_more_pieces()
                 return
             
-            # Ahora el bot elige una pieza para container3
-            print("[DEBUG] Bot selecting piece for container3")
-            QTimer.singleShot(300, self._bot_select_for_c3)
+            # Cambiar el turno lógico del juego para la fase de selección del próximo jugador
+            game.cambiar_turno() # Ahora el siguiente jugador debe seleccionar una pieza
+            
+            # Determinar quién juega ahora
+            next_player_type = self._get_current_player_type()
+            
+            if next_player_type == 'human':
+                self.human_action_phase = "PICK_TO_C4"
+                self.current_turn = "HUMAN"
+                self.update_turn_display()
+                self.update()
+                print(f"[DEBUG] Next is human to pick: {self.human_action_phase}")
+            else: # next_player_type is 'random_bot'
+                self.human_action_phase = "IDLE" # No hay acción humana directa
+                self.current_turn = "BOT"
+                self.update_turn_display()
+                QTimer.singleShot(500, self.handle_bot_turn)
+                print(f"[DEBUG] Next is bot to pick: {self.current_turn}")
         else:
             print("[DEBUG] Bot failed to place piece")
+            # Podríamos implementar reintentos o un manejo de error más robusto aquí
+            self._end_game_no_more_pieces() # Fallback en caso de que el bot elija una posición inválida
     
     def _end_game_no_more_pieces(self):
         """Maneja el fin del juego cuando no hay más piezas"""
@@ -717,107 +834,56 @@ class GameBoard(QWidget):
         
         self.human_action_phase = "IDLE"
     
-    def _bot_select_for_c3(self):
-        """El bot selecciona una pieza para container3"""
-        print("[DEBUG] _bot_select_for_c3")
+    def _bot_select_piece_for_opponent(self):
+        """El bot selecciona una pieza para el oponente y la coloca en container3"""
+        print("[DEBUG] _bot_select_piece_for_opponent")
         
         game = self.quarto_game
+        current_bot = game.get_current_player()
         
-        # Primero cambiar a fase de selección
-        game.cambiar_turno()  # Cambia a fase de selección
-        print(f"[DEBUG] After cambiar_turno, game.pick: {game.pick}")
+        # Bot selecciona una pieza
+        selected_piece_logic = current_bot.select(game)
         
-        # Obtener piezas disponibles
-        available_pieces = self.get_available_pieces()
-        print(f"[DEBUG] Number of available pieces: {len(available_pieces)}")
-        
-        if not available_pieces:
-            print("[DEBUG] No available pieces for C3 selection!")
-            self._end_game_no_more_pieces()
-            return
-        
-        # Forzar al bot a usar solo piezas disponibles
-        # Crear una versión modificada temporal del juego con solo piezas disponibles
-        original_available_pieces = game.available_pieces.copy() if hasattr(game, 'available_pieces') else []
-        
-        # Actualizar las piezas disponibles en el juego
-        game.available_pieces = available_pieces
-        
-        # Bot elige una pieza para container3
-        print(f"[DEBUG] Available pieces for bot selection: {[str(p) for p in available_pieces]}")
-        
-        try:
-            selected_piece_for_c3_logic = game.get_current_player().select(game)
-            print(f"[DEBUG] Bot selected for C3: {selected_piece_for_c3_logic}")
-        except Exception as e:
-            print(f"[DEBUG] Error selecting piece: {e}")
-            # Si hay error, seleccionar manualmente la primera disponible
-            selected_piece_for_c3_logic = available_pieces[0] if available_pieces else None
-        
-        # Restaurar las piezas disponibles originales si existían
-        if original_available_pieces:
-            game.available_pieces = original_available_pieces
-        elif hasattr(game, 'available_pieces'):
-            delattr(game, 'available_pieces')
-        
-        if not selected_piece_for_c3_logic:
-            print("[DEBUG] Bot failed to select a piece")
-            return
-        
-        # Encontrar el PieceItem correspondiente
-        piece_item_for_c3 = None
+        # Actualizar el juego lógico
+        game.selected_piece = selected_piece_logic
+        game.cambiar_turno() # Cambia a fase de colocación para el siguiente jugador
+
+        # Encontrar el PieceItem correspondiente para moverlo a container3
+        piece_item_to_move = None
         for p_item in self.piece_items:
-            if (p_item.piece == selected_piece_for_c3_logic and 
-                not p_item.is_on_board and 
-                not p_item.is_in_container_3_or_4):
-                piece_item_for_c3 = p_item
+            if p_item.piece == selected_piece_logic and not p_item.is_on_board and not p_item.is_in_container_3_or_4:
+                piece_item_to_move = p_item
                 break
         
-        if piece_item_for_c3:
-            # Colocar la pieza en container3
-            piece_item_for_c3.place_in_container(self.container3)
-            piece_item_for_c3.is_in_container_3_or_4 = True
-            piece_item_for_c3.is_on_board = False
-            piece_item_for_c3.current_container = self.container3
+        if piece_item_to_move:
+            # Mover la pieza visualmente a container3
+            piece_item_to_move.place_in_container(self.container3)
+            piece_item_to_in_container_3_or_4 = True
+            piece_item_to_move.is_on_board = False
+            piece_item_to_move.current_container = self.container3
             
-            self.selected_piece_for_c3 = selected_piece_for_c3_logic
+            self.selected_piece_for_c3 = selected_piece_logic # Usado por el humano para saber qué pieza colocar
             
-            # Cambiar turno y permitir al humano jugar
-            game.cambiar_turno()  # Cambia a fase de colocación para el humano
-            print(f"[DEBUG] After second cambiar_turno, game.pick: {game.pick}")
+            # Determinar quién juega ahora (el oponente)
+            next_player_type = self._get_current_player_type()
             
-            self.human_action_phase = "PLACE_FROM_C3"
-            self.current_turn = "HUMAN"
-            self.update_turn_display()
-            
-            # Actualizar la interfaz
-            self.update()
-            print(f"[DEBUG] Human phase set to: {self.human_action_phase}")
+            if next_player_type == 'human':
+                self.human_action_phase = "PLACE_FROM_C3"
+                self.current_turn = "HUMAN"
+                self.update_turn_display()
+                self.update()
+                print(f"[DEBUG] Next is human to place: {self.human_action_phase}")
+            else: # next_player_type is 'random_bot'
+                self.human_action_phase = "IDLE" # No hay acción humana directa
+                self.current_turn = "BOT"
+                self.update_turn_display()
+                QTimer.singleShot(500, self.handle_bot_turn)
+                print(f"[DEBUG] Next is bot to place: {self.current_turn}")
         else:
-            print(f"[DEBUG] Could not find piece item for C3 selection: {selected_piece_for_c3_logic}")
-            print(f"[DEBUG] Available PieceItems state:")
-            for p_item in self.piece_items:
-                print(f"  - {p_item.piece}: is_on_board={p_item.is_on_board}, is_in_container={p_item.is_in_container_3_or_4}, parent={p_item.parentItem()}")
-            
-            # Intentar con otra pieza disponible
-            if available_pieces:
-                # Buscar cualquier pieza disponible
-                for piece in available_pieces:
-                    for p_item in self.piece_items:
-                        if p_item.piece == piece and not p_item.is_on_board and not p_item.is_in_container_3_or_4:
-                            # Usar esta pieza
-                            p_item.place_in_container(self.container3)
-                            p_item.is_in_container_3_or_4 = True
-                            p_item.is_on_board = False
-                            p_item.current_container = self.container3
-                            self.selected_piece_for_c3 = piece
-                            game.cambiar_turno()
-                            self.human_action_phase = "PLACE_FROM_C3"
-                            self.current_turn = "HUMAN"
-                            self.update_turn_display()
-                            self.update()
-                            print(f"[DEBUG] Used fallback piece: {piece}")
-                            return
+            print(f"[ERROR] Could not find PieceItem for selected piece: {selected_piece_logic}")
+            # Esto no debería pasar si get_current_player().select() devuelve una pieza válida
+            # que está en el storage_board y no en el game_board.
+            self._end_game_no_more_pieces() # Considerar terminar o manejar el error de otra forma
 
 # ================================================================
 

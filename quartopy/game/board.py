@@ -87,7 +87,8 @@ class Board:
         * mode_2x2 (bool): If True, checks for 2x2 square winning condition.
             Default is False.
         """
-        assert self.last_move is not None, "last_position should not be None here"
+        if self.last_move is None:
+            return False # No hay último movimiento, no puede haber victoria
 
         row, col = self.last_move
 
