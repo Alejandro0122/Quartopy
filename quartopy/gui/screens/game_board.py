@@ -840,7 +840,7 @@ if __name__ == '__main__':
 
 # Enlazar cvs con record_screen  MARCO
 
-# Boton regresar al menu en game_board.py (Limpie)  Jairo  X
+# Boton regresar al menu en game_board.py (Limpie)  Jairo  X "a medias :v"
 
 # Enlazar condiciones de victoria de board.py a game_board.py  Jairo
 

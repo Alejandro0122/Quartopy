@@ -2,11 +2,13 @@
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QComboBox, QGroupBox, QGridLayout
+    QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox # Se añadió QCheckBox aquí
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
 import sys
+import subprocess # Importar el módulo subprocess para ejecutar comandos externos
+import os         # Importar el módulo os para manejar rutas de archivos
 
 class TypePlayerScreen(QWidget):
     """Pantalla para seleccionar el tipo de jugadores"""
@@ -130,12 +132,12 @@ class TypePlayerScreen(QWidget):
         config_group.setLayout(config_layout)
         layout.addWidget(config_group)
         
-        # Información adicional
-        info_label = QLabel("💡 Puedes jugar: Humano vs Humano, Humano vs Bot, Bot vs Bot")
-        info_label.setFont(QFont("Arial", 10))
-        info_label.setAlignment(Qt.AlignCenter)
-        info_label.setStyleSheet("color: #888888; padding: 15px;")
-        layout.addWidget(info_label)
+        # Checkbox para Modo 2x2
+        self.mode_2x2_checkbox = QCheckBox("Modo 2x2")
+        self.mode_2x2_checkbox.setFont(QFont("Arial", 10))
+        self.mode_2x2_checkbox.setStyleSheet("color: #CCCCCC; padding: 15px;")
+        self.mode_2x2_checkbox.setChecked(False) # Por defecto, no marcado
+        layout.addWidget(self.mode_2x2_checkbox)
         
         # Botones
         buttons_layout = QHBoxLayout()
@@ -252,8 +254,45 @@ class TypePlayerScreen(QWidget):
         """Inicia el juego con la configuración seleccionada"""
         config = self.get_player_config()
         
-        # Emitir señal inmediatamente sin confirmación
-        self.players_selected.emit(config)
+        # Emitir señal inmediatamente sin confirmación (ahora también se inicia el CLI directamente)              
+        self.players_selected.emit(config)  
+
+        # Construir la ruta al script quarto_CLI.py
+        # Se asume que quarto_CLI.py está en el directorio raíz del proyecto
+        # La ruta del proyecto se obtiene del path del archivo actual (type_player.py)
+        # y retrocediendo 3 niveles (screens -> gui -> quartopy -> project_root)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        quarto_cli_path = os.path.join(project_root, 'quarto_CLI.py')
+
+        # Preparar los argumentos para el comando CLI                                                            
+        command = [                                                                                              
+            sys.executable,  # Usa el mismo intérprete de Python                                                 
+            quarto_cli_path,                                                                                     
+            "--player1", config['player1'],                                                                      
+            "--player2", config['player2'],                                                                      
+            "--delay", "0.5",  # Puedes ajustar el delay si es necesario                                         
+        ]  
+        
+        # Si el checkbox de "Modo 2x2" está marcado, añadir el argumento al comando
+        if self.mode_2x2_checkbox.isChecked():
+            command.append("--mode_2x2")
+
+        try:                                                                                                     
+            # Ejecutar el comando CLI en un subproceso.                                                          
+            # Esto permite que el juego de la CLI se ejecute de forma independiente.                             
+            # Se usa `Popen` sin `wait()` para no bloquear la interfaz gráfica.                                  
+            # `creationflags` es útil en Windows para que el nuevo proceso tenga su propia ventana de consola.   
+            if sys.platform == "win32":                                                                          
+                subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)                           
+            else:                                                                                                
+                subprocess.Popen(command)                                                                        
+            print(f"Juego CLI iniciado con: {config['player1']} vs {config['player2']}{' (Modo 2x2)' if self.mode_2x2_checkbox.isChecked() else ''}")                         
+            # Opcionalmente, puedes cerrar la ventana actual de la GUI o hacer una transición                    
+            # self.parentWidget().close() # Cierra la ventana principal de la GUI si esto es deseado      
+        except FileNotFoundError:                                                                                
+            print(f"Error: El script '{quarto_cli_path}' no se encontró.")                                       
+        except Exception as e:                                                                                   
+            print(f"Error al iniciar el juego CLI: {e}")   
     
     def cancel_selection(self):
         """Cancela la selección y vuelve al menú principal"""
