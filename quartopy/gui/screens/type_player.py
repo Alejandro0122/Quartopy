@@ -101,11 +101,6 @@ class TypePlayerScreen(QWidget):
             }
         """)
         
-        # Nota para Jugador 1
-        self.player1_note = QLabel("(Inicia la partida)")
-        self.player1_note.setFont(QFont("Arial", 10))
-        self.player1_note.setStyleSheet("color: #AAAAAA; font-style: italic;")
-        
         # Jugador 2
         self.player2_label = QLabel("Jugador 2:")
         self.player2_label.setFont(QFont("Arial", 12))
@@ -122,8 +117,7 @@ class TypePlayerScreen(QWidget):
         # Añadir widgets al layout
         config_layout.addWidget(self.player1_label, 0, 0)
         config_layout.addWidget(self.player1_combo, 0, 1)
-        config_layout.addWidget(self.player1_note, 0, 2)
-        
+
         config_layout.addWidget(self.player2_label, 1, 0)
         config_layout.addWidget(self.player2_combo, 1, 1)
         config_layout.addWidget(self.player2_note, 1, 2)
@@ -132,10 +126,10 @@ class TypePlayerScreen(QWidget):
         layout.addWidget(config_group)
         
         # Checkbox para Modo 2x2
-        self.mode_2x2_checkbox = QCheckBox("Modo 2x2")
-        self.mode_2x2_checkbox.setFont(QFont("Arial", 10))
-        self.mode_2x2_checkbox.setStyleSheet("color: #CCCCCC; padding: 15px;")
-        self.mode_2x2_checkbox.setChecked(False) # Por defecto, no marcado
+        self.mode_2x2_checkbox = QCheckBox("Modo 2 x 2")
+        self.mode_2x2_checkbox.setFont(QFont("Arial", 14))
+        layout.addWidget(self.mode_2x2_checkbox, alignment=Qt.AlignCenter)
+        self.mode_2x2_checkbox.setChecked(False) 
         layout.addWidget(self.mode_2x2_checkbox)
         
         # Botones
@@ -205,17 +199,6 @@ class TypePlayerScreen(QWidget):
         """Actualiza la interfaz según las selecciones"""
         player1_type = self.player1_combo.currentText()
         player2_type = self.player2_combo.currentText()
-        
-        # Actualizar notas informativas
-        if player1_type == "Humano":
-            self.player1_note.setText("(Inicia la partida - Humano)")
-        else:
-            self.player1_note.setText("(Inicia la partida - Bot)")
-            
-        if player2_type == "Humano":
-            self.player2_note.setText("(Humano)")
-        else:
-            self.player2_note.setText("(Bot)")
         
         # Actualizar colores de los combobox según selección
         player1_style = self.player1_combo.styleSheet()

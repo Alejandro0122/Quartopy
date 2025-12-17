@@ -487,17 +487,17 @@ class GameBoard(QWidget):
         
         # Actualizar player tags
         if self.player1_type == 'human':
-            self.player1_tag.setText(f"P1: Humano ({self.quarto_game.player1.name})")
+            self.player1_tag.setText(f"Jugador 1 \n({self.quarto_game.player1.name})")
             self.player1_tag.setBrush(QColor("#4CAF50"))
         else:
-            self.player1_tag.setText(f"P1: Bot ({self.quarto_game.player1.name})")
+            self.player1_tag.setText(f"Jugador 1 \n({self.quarto_game.player1.name})")
             self.player1_tag.setBrush(QColor("#F44336"))
 
         if self.player2_type == 'human':
-            self.player2_tag.setText(f"P2: Humano ({self.quarto_game.player2.name})")
+            self.player2_tag.setText(f"Jugador 2 \n({self.quarto_game.player2.name})")
             self.player2_tag.setBrush(QColor("#4CAF50"))
         else:
-            self.player2_tag.setText(f"P2: Bot ({self.quarto_game.player2.name})")
+            self.player2_tag.setText(f"Jugador 2 \n({self.quarto_game.player2.name})")
             self.player2_tag.setBrush(QColor("#F44336"))
 
         # Forzar actualización de la escena
