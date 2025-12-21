@@ -39,6 +39,10 @@ class PieceItem(QGraphicsPixmapItem):
         self.current_container = None
 
     def mousePressEvent(self, event):
+        if self.parent_board.game_over:
+            event.ignore()
+            return
+
         # Solo permitir mover si es el turno del humano en la fase correcta
         if self.parent_board._get_current_player_type() != 'human':
             event.ignore()
@@ -106,14 +110,13 @@ class PieceItem(QGraphicsPixmapItem):
                             break
                 
                 # Colocar la nueva pieza en container4
-                game.selected_piece = self.piece
                 self.place_in_container(self.parent_board.container4)
                 self.is_in_container_3_or_4 = True
                 self.is_on_board = False
                 self.current_container = self.parent_board.container4
                 
                 # Actualizar el juego lógico
-                game.selected_piece = self.piece
+                game.select_and_remove_piece(self.piece)
                 game.cambiar_turno() # Cambia a fase de colocación para el siguiente jugador
 
                 # Determinar quién juega ahora (el oponente)
@@ -148,11 +151,12 @@ class PieceItem(QGraphicsPixmapItem):
                             break
                     
                     # Verificar si el juego terminó
-                    if self.parent_board.logic_board.check_win():
-                        self.parent_board.human_action_phase = "IDLE"
+                    if self.parent_board.logic_board.check_win(self.parent_board.quarto_game.mode_2x2):
+                        winner = self.parent_board.quarto_game.get_current_player()
+                        self.parent_board.game_over = True
                         self.parent_board.current_turn = "GAME_OVER"
-                        self.parent_board.update_turn_display()  # Actualizar display
-                        QMessageBox.information(self.parent_board, "¡Victoria!", "🎉 ¡Has ganado el juego!")
+                        self.parent_board.update_turn_display()
+                        QMessageBox.information(self.parent_board, "¡Quarto!", f"¡El jugador {winner.name} ha ganado!")
                         return
                     
                     # Preparar para siguiente ronda
@@ -392,6 +396,7 @@ class GameBoard(QWidget):
         self.selected_piece_for_c3 = None
         self.human_action_phase = "IDLE" # Por defecto, en espera
         self.current_turn = "IDLE"  # IDLE, HUMAN, BOT, GAME_OVER
+        self.game_over = False
 
         # Determinar el estado inicial del juego basado en el tipo de jugador 1
         if self.player1_type == 'human':
@@ -711,6 +716,7 @@ class GameBoard(QWidget):
                 piece_item.current_container = piece_item.original_container
         
         # Reiniciar fases
+        self.game_over = False
         self.human_action_phase = "PICK_TO_C4"
         self.selected_piece_for_c3 = None
         self.current_turn = "HUMAN"
@@ -719,6 +725,8 @@ class GameBoard(QWidget):
     # ================================================================
     def handle_bot_turn(self):
         """Maneja el turno completo del bot"""
+        if self.game_over:
+            return
         print(f"[DEBUG] handle_bot_turn called - current_turn: {self.current_turn}")
         
         if self.current_turn != "BOT":
@@ -778,11 +786,13 @@ class GameBoard(QWidget):
                 piece_item_to_place.setParentItem(None) # Quitar de container3
             
             # Verificar si hay victoria
-            if self.logic_board.check_win():
-                print("[DEBUG] Bot won!")
+            if self.logic_board.check_win(self.quarto_game.mode_2x2):
+                winner = game.get_current_player()
+                print(f"[DEBUG] Bot {winner.name} won!")
+                self.game_over = True
                 self.current_turn = "GAME_OVER"
                 self.update_turn_display()
-                QMessageBox.information(self, "¡Victoria!", f"🎉 ¡{game.get_current_player().name} ha ganado!")
+                QMessageBox.information(self, "¡Quarto!", f"¡El jugador {winner.name} ha ganado!")
                 return
             
             # Resetear la pieza seleccionada en la lógica del juego
@@ -821,18 +831,22 @@ class GameBoard(QWidget):
             self._end_game_no_more_pieces() # Fallback en caso de que el bot elija una posición inválida
     
     def _end_game_no_more_pieces(self):
-        """Maneja el fin del juego cuando no hay más piezas"""
-        print("[DEBUG] Game ended - no more pieces")
-        if self.logic_board.check_win():
-            self.current_turn = "GAME_OVER"
-            self.update_turn_display()
-            QMessageBox.information(self, "¡Victoria!", "🎉 ¡El bot ha ganado!")
-        else:
-            self.current_turn = "GAME_OVER"
-            self.update_turn_display()
-            QMessageBox.information(self, "¡Fin del juego!", "No hay más piezas disponibles. ¡Es un empate!")
-        
+        """Maneja el fin del juego cuando es un empate o un error."""
+        self.game_over = True
         self.human_action_phase = "IDLE"
+        self.current_turn = "GAME_OVER"
+        self.update_turn_display()
+
+        # Comprobar si la última jugada resultó en victoria
+        if self.logic_board.check_win(self.quarto_game.mode_2x2):
+            winner = self.quarto_game.get_current_player()
+            QMessageBox.information(self, "¡Quarto!", f"¡El jugador {winner.name} ha ganado!")
+        # Si el tablero está lleno y no hay ganador, es empate
+        elif self.logic_board.is_full():
+             QMessageBox.information(self, "¡Empate!", "El tablero está lleno. ¡Es un empate!")
+        # Caso contrario, es un error (p.ej. el bot no pudo elegir pieza)
+        else:
+            QMessageBox.warning(self, "Error", "El juego ha terminado por un error inesperado.")
     
     def _bot_select_piece_for_opponent(self):
         """El bot selecciona una pieza para el oponente y la coloca en container3"""
@@ -845,7 +859,12 @@ class GameBoard(QWidget):
         selected_piece_logic = current_bot.select(game)
         
         # Actualizar el juego lógico
-        game.selected_piece = selected_piece_logic
+        if not game.select_and_remove_piece(selected_piece_logic):
+            # Si la pieza seleccionada por el bot no se encuentra (error de lógica del bot), terminar el juego.
+            print(f"[ERROR] Bot selected an invalid piece that is not in storage: {selected_piece_logic}")
+            self._end_game_no_more_pieces()
+            return
+        
         game.cambiar_turno() # Cambia a fase de colocación para el siguiente jugador
 
         # Encontrar el PieceItem correspondiente para moverlo a container3

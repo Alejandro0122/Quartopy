@@ -129,6 +129,17 @@ class QuartoGame:
 
             # self.selected_piece = 0
 
+    def select_and_remove_piece(self, piece: Piece):
+        """Finds a piece on the storage board, removes it, and sets it as the selected piece."""
+        if coord := self.storage_board.find_piece(piece):
+            r, c = coord
+            self.storage_board.remove_piece(r, c)
+            self.selected_piece = piece
+            return True
+        else:
+            logger.error(f"Attempted to select piece {piece} not found in storage.")
+            return False
+
     def cambiar_turno(self):
         """Cambia el turno y la fase del juego"""
         # Cambiar turno
