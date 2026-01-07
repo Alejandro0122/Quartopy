@@ -149,7 +149,7 @@ class QuartoGame:
 
 
     def export_history_to_csv(
-        self, output_folder: str = "./partidas_guardadas/", match_number: int = 1
+        self, output_folder: str = "./partidas_guardadas/", match_number: int = 1, winner: str = "Tie"
     ):
         """Exporta el historial a un CSV con nombre que incluye match, fecha y hora"""
         # Crear directorio si no existe
@@ -198,6 +198,9 @@ class QuartoGame:
                         board,
                     ]
                 )
+            
+            writer.writerow([])
+            writer.writerow(["Ganador", winner])
 
         return filepath
 
@@ -250,4 +253,5 @@ class QuartoGame:
             "Player 1": self.player1.name,
             "Player 2": self.player2.name,
             "result": self.winner_pos,
+            "winner": self.match_result,
         }
