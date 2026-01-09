@@ -1,5 +1,5 @@
-# quartopy/gui/screens/record_screen.py
-
+import os
+import csv
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QTableWidget, QTableWidgetItem,
@@ -9,238 +9,158 @@ from PyQt5.QtGui import QFont, QColor, QBrush
 from PyQt5.QtCore import Qt, pyqtSignal
 
 class RecordScreen(QWidget):
-    """Pantalla para mostrar los records de puntuación"""
+    """Pantalla para mostrar los records de puntuación desde archivos CSV."""
     
-    # Señal para volver al menú
     back_to_menu = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.records_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'partidas_guardadas')
         self.setup_ui()
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
         
     def setup_ui(self):
-        """Configura la interfaz de usuario"""
+        """Configura la interfaz de usuario."""
         layout = QVBoxLayout()
         layout.setSpacing(20)
         layout.setContentsMargins(50, 30, 50, 30)
         
-        # Título
-        title_label = QLabel("RÉCORDS DE PUNTUACIÓN")
+        title_label = QLabel("TABLA DE PUNTUACIONES")
         title_label.setFont(QFont("Arial", 28, QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("""
-            color: #FFD700; 
-            padding: 15px;
-        """)
+        title_label.setStyleSheet("color: #FFD700; padding: 15px;")
         layout.addWidget(title_label)
         
-        # Tabla de records
         self.table = QTableWidget()
         self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(["JUGADOR", "INTENTOS"])
-        self.table.setRowCount(10)  # 10 filas fijas
+        self.table.setHorizontalHeaderLabels(["Ganador", "Número de Movimientos"])
         
-        # Configurar encabezados
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
         header.setStyleSheet("""
             QHeaderView::section {
-                background-color: #333333;
-                color: #FFD700;
-                font-weight: bold;
-                font-size: 16px;
-                padding: 15px;
-                border: none;
+                background-color: #333333; color: #FFD700; font-weight: bold;
+                font-size: 16px; padding: 15px; border: none;
                 border-bottom: 2px solid #FFD700;
             }
         """)
         
-        # Ocultar encabezado vertical
         self.table.verticalHeader().setVisible(False)
-        
-        # Estilo de la tabla
         self.table.setStyleSheet("""
             QTableWidget {
-                background-color: #2a2a2a;
-                border: 2px solid #FFD700;
-                border-radius: 8px;
-                gridline-color: #555555;
-                font-size: 14px;
-                selection-background-color: #FFD700;
-                selection-color: black;
+                background-color: #2a2a2a; border: 2px solid #FFD700;
+                border-radius: 8px; gridline-color: #555555; font-size: 14px;
             }
-            QTableWidget::item {
-                padding: 12px;
-                border-bottom: 1px solid #444444;
-                text-align: center;
-            }
+            QTableWidget::item { padding: 12px; border-bottom: 1px solid #444444; }
         """)
-        
-        # Configurar tabla como no editable
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        
-        # Llenar la tabla con datos de ejemplo (o vacíos)
-        self.initialize_table()
-        
         layout.addWidget(self.table)
         
-        # Botón Volver
         buttons_layout = QHBoxLayout()
-        self.back_btn = QPushButton("Volver al Menú")
-        self.back_btn.setFont(QFont("Arial", 12, QFont.Bold))
-        self.back_btn.setFixedSize(200, 50)
-        self.back_btn.setStyleSheet("""
+        self.btn_back = QPushButton("Volver al Menú")
+        self.btn_back.setFont(QFont("Arial", 12, QFont.Bold))
+        self.btn_back.setFixedSize(200, 50)
+        self.btn_back.setStyleSheet("""
             QPushButton {
-                background-color: #FFD700;
-                color: black;
-                border: 2px solid #FFC400;
+                background-color: #FFD700; color: black; border: 2px solid #FFC400;
                 border-radius: 8px;
             }
-            QPushButton:hover {
-                background-color: #FFC400;
-                border: 2px solid #FFB300;
-            }
-            QPushButton:pressed {
-                background-color: #FFB300;
-            }
+            QPushButton:hover { background-color: #FFC400; }
         """)
-        self.back_btn.clicked.connect(self.go_back)
+        self.btn_back.clicked.connect(self.back_to_menu.emit)
         
         buttons_layout.addStretch()
-        buttons_layout.addWidget(self.back_btn)
+        buttons_layout.addWidget(self.btn_back)
         buttons_layout.addStretch()
-        
         layout.addLayout(buttons_layout)
         
         self.setLayout(layout)
-    
-    def initialize_table(self):
-        """Inicializa la tabla con datos de ejemplo"""
-        # Datos de ejemplo
-        records = [
-            {"player": "Carlos", "attempts": 8},
-            {"player": "Ana", "attempts": 6},
-            {"player": "Luis", "attempts": 12},
-            {"player": "María", "attempts": 9},
-            {"player": "Pedro", "attempts": 7},
-            {"player": "Sofía", "attempts": 10},
-            {"player": "", "attempts": ""},
-            {"player": "", "attempts": ""},
-            {"player": "", "attempts": ""},
-            {"player": "", "attempts": ""},
-        ]
+
+    def load_records(self):
+        """
+        Carga los datos desde los archivos CSV, encuentra la mejor partida de cada
+        jugador y muestra los 10 mejores en una tabla.
+        """
+        if not os.path.exists(self.records_path):
+            self.display_no_data()
+            return
+
+        files = [f for f in os.listdir(self.records_path) if f.endswith('.csv')]
+        best_scores = {}
+
+        for file_name in files:
+            file_path = os.path.join(self.records_path, file_name)
+            try:
+                with open(file_path, 'r', newline='') as csvfile:
+                    lines = list(csv.reader(csvfile))
+                    lines = [line for line in lines if line] # Filtrar líneas vacías
+                    
+                    if len(lines) < 2:
+                        continue
+                    
+                    last_line = lines[-1]
+                    winner = "Empate" 
+                    if last_line[0].lower() == 'ganador':
+                        winner = last_line[1]
+
+                    if winner == "Empate":
+                        continue
+
+                    try:
+                        moves = int(lines[-2][0])
+                        # Si el jugador ya tiene un récord, solo actualizar si es mejor (menos movimientos)
+                        if winner not in best_scores or moves < best_scores[winner]:
+                            best_scores[winner] = moves
+                    except (ValueError, IndexError):
+                        continue
+
+            except Exception as e:
+                print(f"Error al leer el archivo {file_name}: {e}")
+
+        if not best_scores:
+            self.display_no_data()
+            return
+
+        # Convertir el diccionario de mejores puntuaciones a una lista de diccionarios
+        records_list = [{'winner': player, 'moves': score} for player, score in best_scores.items()]
         
-        for i in range(10):
-            # Columna JUGADOR
-            player_item = QTableWidgetItem(records[i]["player"] if i < len(records) else "")
-            player_item.setTextAlignment(Qt.AlignCenter)
-            player_item.setFont(QFont("Arial", 12))
-            
-            # Columna INTENTOS
-            attempts_text = str(records[i]["attempts"]) if i < len(records) and records[i]["attempts"] != "" else ""
-            attempts_item = QTableWidgetItem(attempts_text)
-            attempts_item.setTextAlignment(Qt.AlignCenter)
-            attempts_item.setFont(QFont("Arial", 12, QFont.Bold))
-            
-            # Colorear las primeras filas con datos
-            if i < len(records) and records[i]["player"]:
-                if i == 0:  # Primer lugar - Oro
-                    player_item.setForeground(QBrush(QColor("#FFD700")))
-                    attempts_item.setForeground(QBrush(QColor("#FFD700")))
-                elif i == 1:  # Segundo lugar - Plata
-                    player_item.setForeground(QBrush(QColor("#C0C0C0")))
-                    attempts_item.setForeground(QBrush(QColor("#C0C0C0")))
-                elif i == 2:  # Tercer lugar - Bronce
-                    player_item.setForeground(QBrush(QColor("#CD7F32")))
-                    attempts_item.setForeground(QBrush(QColor("#CD7F32")))
-                else:  # Resto
-                    player_item.setForeground(QBrush(QColor("#FFFFFF")))
-                    attempts_item.setForeground(QBrush(QColor("#FFFFFF")))
-            
-            self.table.setItem(i, 0, player_item)
-            self.table.setItem(i, 1, attempts_item)
-    
-    def set_records(self, records_data):
-        """Establece los datos de la tabla desde fuera"""
-        for i in range(min(10, len(records_data))):
-            record = records_data[i]
-            
-            # Columna JUGADOR
-            player_item = QTableWidgetItem(record.get("player", ""))
-            player_item.setTextAlignment(Qt.AlignCenter)
-            player_item.setFont(QFont("Arial", 12))
-            
-            # Columna INTENTOS
-            attempts_item = QTableWidgetItem(str(record.get("attempts", "")))
-            attempts_item.setTextAlignment(Qt.AlignCenter)
-            attempts_item.setFont(QFont("Arial", 12, QFont.Bold))
-            
-            # Colorear según la posición
-            if i == 0:  # Primer lugar - Oro
-                player_item.setForeground(QBrush(QColor("#FFD700")))
-                attempts_item.setForeground(QBrush(QColor("#FFD700")))
-            elif i == 1:  # Segundo lugar - Plata
-                player_item.setForeground(QBrush(QColor("#C0C0C0")))
-                attempts_item.setForeground(QBrush(QColor("#C0C0C0")))
-            elif i == 2:  # Tercer lugar - Bronce
-                player_item.setForeground(QBrush(QColor("#CD7F32")))
-                attempts_item.setForeground(QBrush(QColor("#CD7F32")))
-            else:  # Resto
-                player_item.setForeground(QBrush(QColor("#FFFFFF")))
-                attempts_item.setForeground(QBrush(QColor("#FFFFFF")))
-            
-            self.table.setItem(i, 0, player_item)
-            self.table.setItem(i, 1, attempts_item)
+        # Ordenar por número de movimientos (ascendente)
+        sorted_records = sorted(records_list, key=lambda x: x['moves'])
         
-        # Limpiar las filas restantes si hay menos de 10 records
-        for i in range(len(records_data), 10):
-            self.table.setItem(i, 0, QTableWidgetItem(""))
-            self.table.setItem(i, 1, QTableWidgetItem(""))
-    
-    def go_back(self):
-        """Vuelve al menú principal"""
-        self.back_to_menu.emit()
-    
+        # Mostrar solo los 10 mejores
+        top_10_records = sorted_records[:10]
+        
+        self.table.setRowCount(len(top_10_records))
+        for i, record in enumerate(top_10_records):
+            winner_item = QTableWidgetItem(record['winner'])
+            moves_item = QTableWidgetItem(str(record['moves']))
+            
+            winner_item.setTextAlignment(Qt.AlignCenter)
+            moves_item.setTextAlignment(Qt.AlignCenter)
+
+            if i == 0: color = QColor("#FFD700")  # Oro
+            elif i == 1: color = QColor("#C0C0C0")  # Plata
+            elif i == 2: color = QColor("#CD7F32")  # Bronce
+            else: color = QColor("white")
+            
+            winner_item.setForeground(QBrush(color))
+            moves_item.setForeground(QBrush(color))
+            
+            self.table.setItem(i, 0, winner_item)
+            self.table.setItem(i, 1, moves_item)
+
+    def display_no_data(self):
+        """Muestra un mensaje en la tabla cuando no hay datos."""
+        self.table.setRowCount(1)
+        self.table.setSpan(0, 0, 1, 2) # Unir las dos columnas
+        no_data_item = QTableWidgetItem("No hay partidas guardadas para mostrar.")
+        no_data_item.setTextAlignment(Qt.AlignCenter)
+        no_data_item.setFont(QFont("Arial", 14))
+        no_data_item.setForeground(QBrush(QColor("gray")))
+        self.table.setItem(0, 0, no_data_item)
+
     def showEvent(self, event):
-        """Se ejecuta cuando se muestra la pantalla"""
+        """Se ejecuta cuando el widget se muestra. Recarga los datos."""
         super().showEvent(event)
-        # Puedes cargar datos reales aquí si los tienes
-
-
-# Función de prueba
-def test_record_screen():
-    """Función de prueba para la pantalla de records"""
-    from PyQt5.QtWidgets import QApplication
-    import sys
-    
-    app = QApplication(sys.argv)
-    
-    def on_back_to_menu():
-        print("Volviendo al menú principal")
-        app.quit()
-    
-    # Crear pantalla
-    screen = RecordScreen()
-    screen.back_to_menu.connect(on_back_to_menu)
-    
-    # Ejemplo: establecer datos desde fuera
-    records_data = [
-        {"player": "Carlos", "attempts": 12},
-        {"player": "Ana", "attempts": 8},
-        {"player": "Luis", "attempts": 15},
-        {"player": "María", "attempts": 10},
-        {"player": "Pedro", "attempts": 6},
-    ]
-    screen.set_records(records_data)
-    
-    screen.setWindowTitle("Quarto - Records de Puntuación")
-    screen.resize(800, 600)
-    screen.show()
-    
-    sys.exit(app.exec_())
-
-
-if __name__ == "__main__":
-    test_record_screen()
+        self.load_records()

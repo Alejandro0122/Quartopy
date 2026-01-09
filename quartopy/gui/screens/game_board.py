@@ -508,8 +508,14 @@ class GameBoard(QWidget):
         """Actualiza el display del turno según el estado actual"""
         current_player_logic = self.quarto_game.get_current_player()
         
+        # Determinar el nombre a mostrar para el turno central
+        if current_player_logic is self.quarto_game.player1:
+            display_name = "Jugador 1"
+        else:
+            display_name = "Jugador 2"
+
         if self.current_turn == "HUMAN":
-            self.current_player_text.setPlainText(f"  {current_player_logic.name}")
+            self.current_player_text.setPlainText(f"  {display_name}")
             self.current_player_text.setDefaultTextColor(QColor("#4CAF50"))  # Verde
             # Actualizar color de fondo según fase
             if self.human_action_phase == "PICK_TO_C4":
@@ -517,7 +523,7 @@ class GameBoard(QWidget):
             elif self.human_action_phase == "PLACE_FROM_C3":
                 self.turn_display_bg.setBrush(QColor(255, 193, 7, 150))  # Amarillo transparente
         elif self.current_turn == "BOT":
-            self.current_player_text.setPlainText(f"  {current_player_logic.name}")
+            self.current_player_text.setPlainText(f"  {display_name}")
             self.current_player_text.setDefaultTextColor(QColor("#F44336"))  # Rojo
             self.turn_display_bg.setBrush(QColor(244, 67, 54, 150))  # Rojo transparente
         elif self.current_turn == "GAME_OVER":
@@ -525,19 +531,17 @@ class GameBoard(QWidget):
             self.current_player_text.setDefaultTextColor(QColor("#9E9E9E"))  # Gris
             self.turn_display_bg.setBrush(QColor(158, 158, 158, 150))  # Gris transparente
         
-        # Actualizar player tags
+        # Actualizar player tags (lógica simplificada)
+        self.player1_tag.setText(f"  Jugador 1 \n({self.quarto_game.player1.name})")
         if self.player1_type == 'human':
-            self.player1_tag.setText(f"Jugador 1 \n({self.quarto_game.player1.name})")
             self.player1_tag.setBrush(QColor("#4CAF50"))
         else:
-            self.player1_tag.setText(f"Jugador 1 \n({self.quarto_game.player1.name})")
             self.player1_tag.setBrush(QColor("#F44336"))
 
+        self.player2_tag.setText(f"  Jugador 2 \n({self.quarto_game.player2.name})")
         if self.player2_type == 'human':
-            self.player2_tag.setText(f"Jugador 2 \n({self.quarto_game.player2.name})")
             self.player2_tag.setBrush(QColor("#4CAF50"))
         else:
-            self.player2_tag.setText(f"Jugador 2 \n({self.quarto_game.player2.name})")
             self.player2_tag.setBrush(QColor("#F44336"))
 
         # Forzar actualización de la escena
