@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox # Se añadió QCheckBox aquí
+    QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox, QInputDialog
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -19,6 +19,8 @@ class TypePlayerScreen(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.player1_name = "Jugador 1"
+        self.player2_name = "Jugador 2"
         self.setup_ui()
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
         
@@ -64,9 +66,12 @@ class TypePlayerScreen(QWidget):
         config_layout.setSpacing(15)
         
         # Jugador 1
-        self.player1_label = QLabel("Jugador 1:")
+        self.player1_label = QLabel(f"{self.player1_name}:")
         self.player1_label.setFont(QFont("Arial", 12))
         self.player1_label.setStyleSheet("color: #FFFFFF;")
+        
+        self.player1_edit_btn = QPushButton("Editar")
+        self.player1_edit_btn.clicked.connect(self.edit_player1_name)
         
         self.player1_combo = QComboBox()
         self.player1_combo.setFont(QFont("Arial", 11))
@@ -102,9 +107,12 @@ class TypePlayerScreen(QWidget):
         """)
         
         # Jugador 2
-        self.player2_label = QLabel("Jugador 2:")
+        self.player2_label = QLabel(f"{self.player2_name}:")
         self.player2_label.setFont(QFont("Arial", 12))
         self.player2_label.setStyleSheet("color: #FFFFFF;")
+
+        self.player2_edit_btn = QPushButton("Editar")
+        self.player2_edit_btn.clicked.connect(self.edit_player2_name)
         
         self.player2_combo = QComboBox()
         self.player2_combo.setFont(QFont("Arial", 11))
@@ -117,10 +125,11 @@ class TypePlayerScreen(QWidget):
         # Añadir widgets al layout
         config_layout.addWidget(self.player1_label, 0, 0)
         config_layout.addWidget(self.player1_combo, 0, 1)
+        config_layout.addWidget(self.player1_edit_btn, 0, 2)
 
         config_layout.addWidget(self.player2_label, 1, 0)
         config_layout.addWidget(self.player2_combo, 1, 1)
-        config_layout.addWidget(self.player2_note, 1, 2)
+        config_layout.addWidget(self.player2_edit_btn, 1, 2)
         
         config_group.setLayout(config_layout)
         layout.addWidget(config_group)
@@ -195,6 +204,19 @@ class TypePlayerScreen(QWidget):
         # Configuración inicial
         self.update_ui()
     
+    def edit_player1_name(self):
+        new_name, ok = QInputDialog.getText(self, "Editar Nombre", "Nuevo nombre para Jugador 1:", text=self.player1_name)
+        if ok and new_name:
+            self.player1_name = new_name
+            self.player1_label.setText(f"{self.player1_name}:")
+
+    def edit_player2_name(self):
+        new_name, ok = QInputDialog.getText(self, "Editar Nombre", "Nuevo nombre para Jugador 2:", text=self.player2_name)
+        if ok and new_name:
+            self.player2_name = new_name
+            self.player2_label.setText(f"{self.player2_name}:")
+
+    
     def update_ui(self):
         """Actualiza la interfaz según las selecciones"""
         player1_type = self.player1_combo.currentText()
@@ -226,8 +248,8 @@ class TypePlayerScreen(QWidget):
         config = {
             'player1': 'human' if player1_type == "Humano" else 'random_bot',
             'player2': 'human' if player2_type == "Humano" else 'random_bot',
-            'player1_display': player1_type,
-            'player2_display': player2_type
+            'player1_name': self.player1_name,
+            'player2_name': self.player2_name
         }
         
         return config
@@ -250,6 +272,10 @@ class TypePlayerScreen(QWidget):
         # Restablecer selecciones por defecto
         self.player1_combo.setCurrentIndex(0)  # Humano
         self.player2_combo.setCurrentIndex(1)  # Bot Aleatorio
+        self.player1_name = "Jugador 1"
+        self.player2_name = "Jugador 2"
+        self.player1_label.setText(f"{self.player1_name}:")
+        self.player2_label.setText(f"{self.player2_name}:")
 
 
 # Función de ejemplo para integrar esta pantalla

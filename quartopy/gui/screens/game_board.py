@@ -304,12 +304,16 @@ class GameBoard(QWidget):
         self, 
         parent=None, 
         player1_type: str = 'human', 
-        player2_type: str = 'random_bot', 
+        player2_type: str = 'random_bot',
+        player1_name: str = "Jugador 1",
+        player2_name: str = "Jugador 2", 
         mode_2x2: bool = False
     ):
         super().__init__(parent)
         self.player1_type = player1_type
         self.player2_type = player2_type
+        self.player1_name = player1_name
+        self.player2_name = player2_name
         self.match_number = 1
 
         layout = QVBoxLayout()
@@ -392,15 +396,15 @@ class GameBoard(QWidget):
         # Creación de los jugadores dinámicamente
         self.player1_instance: BotAI
         if self.player1_type == 'human':
-            self.player1_instance = HumanBot()
+            self.player1_instance = HumanBot(name=self.player1_name)
         else: # 'random_bot'
-            self.player1_instance = RandomBot()
+            self.player1_instance = RandomBot(name=self.player1_name)
 
         self.player2_instance: BotAI
         if self.player2_type == 'human':
-            self.player2_instance = HumanBot()
+            self.player2_instance = HumanBot(name=self.player2_name)
         else: # 'random_bot'
-            self.player2_instance = RandomBot()
+            self.player2_instance = RandomBot(name=self.player2_name)
             
         self.quarto_game = QuartoGame(
             player1=self.player1_instance, 
@@ -468,83 +472,78 @@ class GameBoard(QWidget):
             return self.player2_type
 
     def create_turn_display(self):
-        """Crea el display que muestra de quién es el turno"""
-        # Crear rectángulo de fondo
-        self.turn_display_bg = QGraphicsRectItem(0, 0, 100, 60)
+        """Crea los displays de información de turno y acción."""
+        # --- Display de Turno ---
+        self.turn_display_bg = QGraphicsRectItem(0, 0, 120, 60)
         self.turn_display_bg.setPen(QPen(QColor("#FFD700"), 2))
         self.turn_display_bg.setBrush(QColor(0, 0, 0, 200))
-        self.turn_display_bg.setPos(405, 30)
+        self.turn_display_bg.setPos(250, 30)
         self.scene.addItem(self.turn_display_bg)
         
-        # Crear texto
-        self.turn_display_text = QGraphicsTextItem("  TURNO")
-        self.turn_display_text.setDefaultTextColor(QColor("#FFD700"))
-        font = QFont("Arial", 12, QFont.Bold)
-        self.turn_display_text.setFont(font)
-        self.turn_display_text.setPos(415, 35)
-        self.scene.addItem(self.turn_display_text)
+        font_title = QFont("Arial", 12, QFont.Bold)
+        turn_title_text = QGraphicsTextItem("TURNO", self.turn_display_bg)
+        turn_title_text.setDefaultTextColor(QColor("#FFD700"))
+        turn_title_text.setFont(font_title)
+        turn_title_text.setPos(25, 5)
         
-        # Crear texto para el jugador actual
-        self.current_player_text = QGraphicsTextItem("Humano")
+        font_player = QFont("Arial", 14, QFont.Bold)
+        self.current_player_text = QGraphicsTextItem("Jugador 1", self.turn_display_bg)
         self.current_player_text.setDefaultTextColor(QColor("#FFFFFF"))
-        font = QFont("Arial", 14, QFont.Bold)
-        self.current_player_text.setFont(font)
-        self.current_player_text.setPos(415, 55)
-        self.scene.addItem(self.current_player_text)
+        self.current_player_text.setFont(font_player)
+        self.current_player_text.setPos(5, 25)
 
-        # Crear namertags para jugador 1
+        # --- Display de Acción ---
+        self.action_display_bg = QGraphicsRectItem(0, 0, 260, 60)
+        self.action_display_bg.setPen(QPen(QColor("#FFD700"), 2))
+        self.action_display_bg.setBrush(QColor(0, 0, 0, 200))
+        self.action_display_bg.setPos(405, 30)
+        self.scene.addItem(self.action_display_bg)
+
+        self.action_text = QGraphicsTextItem("", self.action_display_bg)
+        self.action_text.setDefaultTextColor(QColor("white"))
+        self.action_text.setFont(font_title)
+        self.action_text.setPos(10, 5)
+
+        # --- Nametags de Jugadores ---
         self.player1_tag = QGraphicsSimpleTextItem("")
-        self.player1_tag.setFont(font)
+        self.player1_tag.setFont(font_player)
         self.player1_tag.setPos(80, 55)
         self.scene.addItem(self.player1_tag)
 
-        # Crear namertags para jugador 2
         self.player2_tag = QGraphicsSimpleTextItem("")
-        self.player2_tag.setFont(font)
+        self.player2_tag.setFont(font_player)
         self.player2_tag.setPos(750, 55)
         self.scene.addItem(self.player2_tag)
 
     def update_turn_display(self):
-        """Actualiza el display del turno según el estado actual"""
+        """Actualiza el display del turno y de la acción según el estado actual."""
         current_player_logic = self.quarto_game.get_current_player()
         
-        # Determinar el nombre a mostrar para el turno central
         if current_player_logic is self.quarto_game.player1:
-            display_name = "Jugador 1"
+            p_current_name = self.player1_name
+            p_next_name = self.player2_name
         else:
-            display_name = "Jugador 2"
+            p_current_name = self.player2_name
+            p_next_name = self.player1_name
 
-        if self.current_turn == "HUMAN":
-            self.current_player_text.setPlainText(f"  {display_name}")
-            self.current_player_text.setDefaultTextColor(QColor("#4CAF50"))  # Verde
-            # Actualizar color de fondo según fase
-            if self.human_action_phase == "PICK_TO_C4":
-                self.turn_display_bg.setBrush(QColor(76, 175, 80, 150))  # Verde transparente
-            elif self.human_action_phase == "PLACE_FROM_C3":
-                self.turn_display_bg.setBrush(QColor(255, 193, 7, 150))  # Amarillo transparente
-        elif self.current_turn == "BOT":
-            self.current_player_text.setPlainText(f"  {display_name}")
-            self.current_player_text.setDefaultTextColor(QColor("#F44336"))  # Rojo
-            self.turn_display_bg.setBrush(QColor(244, 67, 54, 150))  # Rojo transparente
-        elif self.current_turn == "GAME_OVER":
-            self.current_player_text.setPlainText("Fin")
-            self.current_player_text.setDefaultTextColor(QColor("#9E9E9E"))  # Gris
-            self.turn_display_bg.setBrush(QColor(158, 158, 158, 150))  # Gris transparente
+        # Actualizar display de ACCIÓN
+        action_string = ""
+        if self.current_turn == "GAME_OVER":
+            action_string = "Partida Terminada"
+        elif self.quarto_game.pick: # Fase de seleccionar pieza
+            action_string = f"{p_current_name} selecciona la pieza<br>para {p_next_name}"
+        else: # Fase de colocar pieza
+            action_string = f"{p_current_name} coloca la pieza<br>en el tablero"
         
-        # Actualizar player tags (lógica simplificada)
-        self.player1_tag.setText(f"  Jugador 1 \n({self.quarto_game.player1.name})")
-        if self.player1_type == 'human':
-            self.player1_tag.setBrush(QColor("#4CAF50"))
-        else:
-            self.player1_tag.setBrush(QColor("#F44336"))
+        self.action_text.setHtml(f"<div style='text-align: center; width: 300px;'>{action_string}</div>")
 
-        self.player2_tag.setText(f"  Jugador 2 \n({self.quarto_game.player2.name})")
-        if self.player2_type == 'human':
-            self.player2_tag.setBrush(QColor("#4CAF50"))
-        else:
-            self.player2_tag.setBrush(QColor("#F44336"))
+        # Actualizar player tags
+        self.player1_tag.setText(f"{self.player1_name} \n({self.quarto_game.player1.name})")
+        self.player1_tag.setBrush(QColor("#4CAF50") if self.player1_type == 'human' else QColor("#F44336"))
 
-        # Forzar actualización de la escena
+        self.player2_tag.setText(f"{self.player2_name} \n({self.quarto_game.player2.name})")
+        self.player2_tag.setBrush(QColor("#4CAF50") if self.player2_type == 'human' else QColor("#F44336"))
+
         self.scene.update()
 
     # ================================================================
@@ -955,20 +954,4 @@ if __name__ == '__main__':
     window.resize(1000, 700)
     window.show()
     sys.exit(app.exec_())
-
-
-# ================================================================
-# Enlazar quarto_cli con typle_player (para seleccion de bot o humano en default Y boton 2x2 en play) Marco
-
-# Layaouts de nombre de jugadores en game_board.py  MARCO
-
-# Configurar game_board para que juegue bot vs bot (Depende de Type_player)  JAIRO
-
-# Enlazar cvs con record_screen  MARCO
-
-# Boton regresar al menu en game_board.py (Limpie)  Jairo  X "a medias :v"
-
-# Enlazar condiciones de victoria de board.py a game_board.py  Jairo
-
-# Opcional : musica   Jairo
 
