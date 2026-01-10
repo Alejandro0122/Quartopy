@@ -505,6 +505,10 @@ class GameBoard(QWidget):
         """Crea el display que muestra de quién es el turno"""
         # Crear rectángulo de fondo
         self.turn_display_bg = QGraphicsRectItem(0, 0, 100, 60)
+        self.turn_display_bg.setPen(QPen(QColor("#A9A9A9"), 2))
+        """Crea los displays de información de turno y acción."""
+        # --- Display de Turno ---
+        self.turn_display_bg = QGraphicsRectItem(0, 0, 120, 60)
         self.turn_display_bg.setPen(QPen(QColor("#FFD700"), 2))
         self.turn_display_bg.setBrush(QColor(0, 0, 0, 200))
         self.turn_display_bg.setPos(250, 30)
@@ -512,7 +516,7 @@ class GameBoard(QWidget):
         
         # Crear texto
         self.turn_display_text = QGraphicsTextItem("  TURNO")
-        self.turn_display_text.setDefaultTextColor(QColor("#FFD700"))
+        self.turn_display_text.setDefaultTextColor(QColor("#A9A9A9"))
         font = QFont("Arial", 12, QFont.Bold)
         self.turn_display_text.setFont(font)
         self.turn_display_text.setPos(415, 35)
@@ -520,6 +524,14 @@ class GameBoard(QWidget):
         
         # Crear texto para el jugador actual
         self.current_player_text = QGraphicsTextItem("Humano")
+        font_title = QFont("Arial", 12, QFont.Bold)
+        turn_title_text = QGraphicsTextItem("TURNO", self.turn_display_bg)
+        turn_title_text.setDefaultTextColor(QColor("#FFD700"))
+        turn_title_text.setFont(font_title)
+        turn_title_text.setPos(25, 5)
+        
+        font_player = QFont("Arial", 14, QFont.Bold)
+        self.current_player_text = QGraphicsTextItem("Jugador 1", self.turn_display_bg)
         self.current_player_text.setDefaultTextColor(QColor("#FFFFFF"))
         self.current_player_text.setFont(font_player)
         self.current_player_text.setPos(5, 25)
