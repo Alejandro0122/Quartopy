@@ -1,8 +1,8 @@
 from asyncio.log import logger
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QGraphicsView, QGraphicsScene,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsView, QGraphicsScene,
     QGraphicsRectItem, QMessageBox, QPushButton, QGraphicsPixmapItem,
-    QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsTextItem
+    QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsTextItem, QGraphicsProxyWidget
 )
 from PyQt5.QtGui import QPen, QColor, QPixmap, QPainter, QFont
 from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer, pyqtSignal
@@ -270,7 +270,7 @@ class PieceItem(QGraphicsPixmapItem):
 # 🔶 Clase Celda (Item individual clicable)
 # ================================================================
 class CellItem(QGraphicsRectItem):
-    def __init__(self, row, col, parent_board):
+    def __init__(self, row, col, parent_board, size=100):
         super().__init__()
         self.row = row
         self.col = col
@@ -278,7 +278,7 @@ class CellItem(QGraphicsRectItem):
         self.piece_item = None  # Referencia a la pieza colocada
 
         # Tamaño de celda
-        self.setRect(QRectF(0, 0, 100, 100))
+        self.setRect(QRectF(0, 0, size, size))
         self.setPen(QPen(QColor("#A9A9A9"), 2))
         self.setBrush(QColor("#000000"))
 
@@ -316,84 +316,81 @@ class GameBoard(QWidget):
         self.player2_name = player2_name
         self.match_number = 1
 
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+        # --- Main Vertical Layout ---
+        main_v_layout = QVBoxLayout(self)
+        self.setLayout(main_v_layout)
         self.setStyleSheet("background-color: black;")
 
+        # --- Title Label ---
         title_label = QLabel("QUARTO")
         title_label.setStyleSheet("background-color: white; font-size: 16pt; font-weight: bold; color: black;")
         title_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title_label)
+        main_v_layout.addWidget(title_label)
 
-        # --- Escena y vista ---
+        # --- QGraphicsView ---
         self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing, True)
-        self.view.setAlignment(Qt.AlignCenter)
+        self.view.setAlignment(Qt.AlignCenter) # Center the content within the view
         self.view.setStyleSheet("background-color: #0F0A07 ; border: none;")
-        layout.addWidget(self.view)
+        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        main_v_layout.addWidget(self.view, 1) # Add with stretch factor
 
-        # --- Tablero ---
+        # --- Buttons (as Proxy Widgets in the Scene) ---
+        button_style = """
+            QPushButton {
+                background-color: rgba(0, 0, 0, 180);
+                color: white;
+                border: 2px solid white;
+                padding: 10px;
+                font-size: 12pt;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: rgba(50, 50, 50, 200);
+            }
+        """
+        self.btn_back_to_menu = QPushButton('Volver al Menú')
+        self.btn_back_to_menu.setStyleSheet(button_style)
+        self.btn_back_to_menu.setFixedSize(180, 50)
+        self.btn_back_to_menu.clicked.connect(self.go_back_to_menu)
+        
+        self.btn_exit = QPushButton('Salir')
+        self.btn_exit.setStyleSheet(button_style)
+        self.btn_exit.setFixedSize(150, 50)
+        self.btn_exit.clicked.connect(self.close)
+
+        # Create proxy widgets and position them in the scene
+        proxy_back = QGraphicsProxyWidget()
+        proxy_back.setWidget(self.btn_back_to_menu)
+        proxy_back.setPos(60, 450)
+        self.scene.addItem(proxy_back)
+
+        proxy_exit = QGraphicsProxyWidget()
+        proxy_exit.setWidget(self.btn_exit)
+        proxy_exit.setPos(260, 450)
+        self.scene.addItem(proxy_exit)
+
+        # --- Tablero (QGraphicsItems within scene) ---
         self.cells = []
         self.create_board_grid()
 
-        # --- Botón salir ---
-        self.btn_exit = QPushButton('Salir', self)
-        self.btn_exit.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(0, 0, 0, 180);
-                color: white;
-                border: 2px solid white;
-                padding: 15px;
-                font-size: 14pt;
-                border-radius: 10px;
-            }
-            QPushButton:hover {
-                background-color: rgba(50, 50, 50, 200);
-            }
-        """)
-        self.btn_exit.resize(100, 60)
-        self.btn_exit.raise_()
-        self.btn_exit.move(800, 530)
+        # --- Contenedores de destino (3 y 4) y sus labels ---
+        font = QFont("Arial", 11, QFont.Bold)
+        
+        # Posicionar los contenedores de dar/colocar pieza centrados bajo los nombres de jugador, con más separación
+        self.container4 = self.create_simple_container(105, 100, 80, 80)
+        self.container3 = self.create_simple_container(285, 100, 80, 80) # Increased x for more separation
 
-        # --- Botón volver al menú ---
-        self.btn_back_to_menu = QPushButton('Volver al Menú', self)
-        self.btn_back_to_menu.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(0, 0, 0, 180);
-                color: white;
-                border: 2px solid white;
-                padding: 15px;
-                font-size: 14pt;
-                border-radius: 10px;
-            }
-            QPushButton:hover {
-                background-color: rgba(50, 50, 50, 200);
-            }
-        """)
-        self.btn_back_to_menu.clicked.connect(self.go_back_to_menu)
-        self.btn_back_to_menu.resize(165, 60)
-        self.btn_back_to_menu.raise_()
-        self.btn_back_to_menu.move(750, 460)
+        # Contenedor de piezas disponibles (cuadrado 4x4)
+        piece_area_size = 4 * 60 # 4 pieces of 60px
+        self.all_pieces_container = self.create_container(115, 200, piece_area_size, piece_area_size, rotate=False)
 
-        # --- Contenedores ---
-        cell_size = 60
-        container_width = 4 * cell_size
-        container_height = 2 * cell_size
+        # --- Display de turno y Nametags (QGraphicsItems within scene) ---
+        self.create_turn_display() # This creates QGraphicsItems in self.scene
 
-        # Crear contenedores principales (1 y 2)
-        self.container1 = self.create_container(0, 250, container_width, container_height, rotate=False)
-        self.container2 = self.create_container(675, 250, container_width, container_height, rotate=False)
-
-        # Contenedores de destino (3 y 4)
-        self.container3 = self.create_simple_container(90, 100, 70, 70)
-        self.container4 = self.create_simple_container(765, 100, 70, 70)
-
-        # --- Display de turno ---
-        self.create_turn_display()
-
-        # --- Lógica del tablero ---
-        # Creación de los jugadores dinámicamente
+        # --- Common game logic setup ---
         self.player1_instance: BotAI
         if self.player1_type == 'human':
             self.player1_instance = HumanBot(name=self.player1_name)
@@ -430,10 +427,10 @@ class GameBoard(QWidget):
         self.create_all_pieces()
         
         # Ajustar vista de la escena para ver todo
-        self.scene.setSceneRect(0, 0, 1000, 700)
+        self.scene.setSceneRect(0, 0, 1000, 700) # This needs to encompass all the QGraphicsItems
 
         # Radio de atracción a las celdas
-        self.snap_distance = 80
+        self.snap_distance = 60
         
         # Inicializar display de turno
         self.update_turn_display()
@@ -502,61 +499,30 @@ class GameBoard(QWidget):
             return self.player2_type
 
     def create_turn_display(self):
-        """Crea el display que muestra de quién es el turno"""
-        # Crear rectángulo de fondo
-        self.turn_display_bg = QGraphicsRectItem(0, 0, 100, 60)
-        self.turn_display_bg.setPen(QPen(QColor("#A9A9A9"), 2))
         """Crea los displays de información de turno y acción."""
-        # --- Display de Turno ---
-        self.turn_display_bg = QGraphicsRectItem(0, 0, 120, 60)
-        self.turn_display_bg.setPen(QPen(QColor("#FFD700"), 2))
-        self.turn_display_bg.setBrush(QColor(0, 0, 0, 200))
-        self.turn_display_bg.setPos(250, 30)
-        self.scene.addItem(self.turn_display_bg)
-        
-        # Crear texto
-        self.turn_display_text = QGraphicsTextItem("  TURNO")
-        self.turn_display_text.setDefaultTextColor(QColor("#A9A9A9"))
-        font = QFont("Arial", 12, QFont.Bold)
-        self.turn_display_text.setFont(font)
-        self.turn_display_text.setPos(415, 35)
-        self.scene.addItem(self.turn_display_text)
-        
-        # Crear texto para el jugador actual
-        self.current_player_text = QGraphicsTextItem("Humano")
         font_title = QFont("Arial", 12, QFont.Bold)
-        turn_title_text = QGraphicsTextItem("TURNO", self.turn_display_bg)
-        turn_title_text.setDefaultTextColor(QColor("#FFD700"))
-        turn_title_text.setFont(font_title)
-        turn_title_text.setPos(25, 5)
-        
         font_player = QFont("Arial", 14, QFont.Bold)
-        self.current_player_text = QGraphicsTextItem("Jugador 1", self.turn_display_bg)
-        self.current_player_text.setDefaultTextColor(QColor("#FFFFFF"))
-        self.current_player_text.setFont(font_player)
-        self.current_player_text.setPos(5, 25)
-
+        
         # --- Display de Acción ---
-        self.action_display_bg = QGraphicsRectItem(0, 0, 260, 60)
+        self.action_display_bg = QGraphicsRectItem(0, 0, 300, 60) # Tamaño reducido
         self.action_display_bg.setPen(QPen(QColor("#FFD700"), 2))
         self.action_display_bg.setBrush(QColor(0, 0, 0, 200))
-        self.action_display_bg.setPos(405, 30)
+        self.action_display_bg.setPos(495, 50) # Reposicionado y centrado
         self.scene.addItem(self.action_display_bg)
 
         self.action_text = QGraphicsTextItem("", self.action_display_bg)
         self.action_text.setDefaultTextColor(QColor("white"))
         self.action_text.setFont(font_title)
-        self.action_text.setPos(10, 5)
-
+        
         # --- Nametags de Jugadores ---
         self.player1_tag = QGraphicsSimpleTextItem("")
         self.player1_tag.setFont(font_player)
-        self.player1_tag.setPos(80, 55)
+        self.player1_tag.setPos(40, 50) # Movido hacia arriba
         self.scene.addItem(self.player1_tag)
 
         self.player2_tag = QGraphicsSimpleTextItem("")
         self.player2_tag.setFont(font_player)
-        self.player2_tag.setPos(750, 55)
+        self.player2_tag.setPos(250, 50) # Movido hacia arriba y al lado
         self.scene.addItem(self.player2_tag)
 
     def update_turn_display(self):
@@ -575,17 +541,20 @@ class GameBoard(QWidget):
         if self.current_turn == "GAME_OVER":
             action_string = "Partida Terminada"
         elif self.quarto_game.pick: # Fase de seleccionar pieza
-            action_string = f"{p_current_name} selecciona la pieza<br>para {p_next_name}"
+            action_string = f"Turno de: {p_current_name}<br>Selecciona una pieza para {p_next_name}"
         else: # Fase de colocar pieza
-            action_string = f"{p_current_name} coloca la pieza<br>en el tablero"
+            action_string = f"Turno de: {p_current_name}<br>Coloca la pieza en el tablero"
         
-        self.action_text.setHtml(f"<div style='text-align: center; width: 300px;'>{action_string}</div>")
+        # Centrar el texto en el nuevo contenedor
+        self.action_text.setHtml(f"<div style='text-align: center; width: 380px;'>{action_string}</div>")
 
         # Actualizar player tags
-        self.player1_tag.setText(f"{self.player1_name} \n({self.quarto_game.player1.name})")
+        p1_type_str = "Humano" if self.player1_type == 'human' else "Bot"
+        self.player1_tag.setText(f"{self.player1_name} ({p1_type_str})")
         self.player1_tag.setBrush(QColor("#4CAF50") if self.player1_type == 'human' else QColor("#F44336"))
 
-        self.player2_tag.setText(f"{self.player2_name} \n({self.quarto_game.player2.name})")
+        p2_type_str = "Humano" if self.player2_type == 'human' else "Bot"
+        self.player2_tag.setText(f"{self.player2_name} ({p2_type_str})")
         self.player2_tag.setBrush(QColor("#4CAF50") if self.player2_type == 'human' else QColor("#F44336"))
 
         self.scene.update()
@@ -685,7 +654,7 @@ class GameBoard(QWidget):
         self.scene.addItem(container)
         return container
 
-    def create_container(self, x, y, w, h, rotate=True, label=""):
+    def create_container(self, x, y, w, h, rotate=False, label=""):
         """Crea un contenedor con opción de rotación"""
         container = QGraphicsRectItem(0, 0, w, h)
         container.setPen(QPen(QColor("#A9A9A9"), 2))
@@ -694,71 +663,79 @@ class GameBoard(QWidget):
         container.setPos(x, y)
         self.scene.addItem(container)
         
-        if rotate:
+        if rotate: # Only apply rotation if rotate is True
             container.setRotation(90)
 
         # Líneas de cuadrícula
-        for i in range(5):
-            line = self.scene.addLine(i * 60, 0, i * 60, h, QPen(QColor("#A9A9A9"), 1))
+        for i in range(5): # 5 vertical lines for 4 columns
+            line = self.scene.addLine(i * (w/4), 0, i * (w/4), h, QPen(QColor("#A9A9A9"), 1))
             line.setParentItem(container)
-        for j in range(3):
-            line = self.scene.addLine(0, j * 60, w, j * 60, QPen(QColor("#A9A9A9"), 1))
+        for j in range(5): # 5 horizontal lines for 4 rows
+            line = self.scene.addLine(0, j * (h/4), w, j * (h/4), QPen(QColor("#A9A9A9"), 1))
             line.setParentItem(container)
                 
         return container
 
     # ================================================================
     def create_all_pieces(self):
-        """Crea las 16 piezas completas del juego Quarto"""
-        # Lista de todas las piezas con sus propiedades y posiciones iniciales
+        """Crea las 16 piezas completas del juego Quarto en una cuadrícula 4x4."""
         pieces_data = [
-            # Piezas negras - Container 1
-            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc0.png", 0, 0, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bc1.png", 60, 0, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc2.png", 120, 0, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bc3.png", 180, 0, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs0.png", 0, 60, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bs1.png", 60, 60, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs2.png", 120, 60, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bs3.png", 180, 60, self.container1),
-            
-            # Piezas blancas - Container 2
-            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc0.png", 0, 0, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gc1.png", 60, 0, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc2.png", 120, 0, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gc3.png", 180, 0, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs0.png", 0, 60, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gs1.png", 60, 60, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs2.png", 120, 60, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gs3.png", 180, 60, self.container2),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc0.png"),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bc1.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc2.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bc3.png"),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs0.png"),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bs1.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs2.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bs3.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc0.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gc1.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc2.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gc3.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs0.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gs1.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs2.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gs3.png"),
         ]
         
-        # Crear todas las piezas
         self.piece_items = []
-        for piece, image_path, x, y, container in pieces_data:
+        piece_size = 60
+        for i, (piece, image_path) in enumerate(pieces_data):
+            row = i // 4
+            col = i % 4
+            x = col * piece_size
+            y = row * piece_size
+            
             piece_item = PieceItem(piece, image_path, self)
             piece_item.setPos(x, y)
-            piece_item.setParentItem(container)
+            piece_item.setParentItem(self.all_pieces_container) # Use the new single container
             
             # Inicializar estado original
-            piece_item.original_container = container
+            piece_item.original_container = self.all_pieces_container
             piece_item.original_position = QPointF(x, y)
-            piece_item.current_container = container
+            piece_item.current_container = self.all_pieces_container
             
             self.piece_items.append(piece_item)
 
     # ================================================================
     def create_board_grid(self):
-        """Crea la cuadrícula principal del tablero 4x4."""
-        cell_size = 100
+        """Crea la cuadrícula principal del tablero 4x4 en la parte derecha."""
+        cell_size = 85  # Tablero más pequeño
         spacing = 5
-        start_x = 250  # Posición central para el tablero
-        start_y = 100
+        start_x = 470  # Movido más a la izquierda
+        start_y = 150
+
+        # Fondo opcional para el tablero
+        board_bg_size = 4 * (cell_size + spacing) + spacing
+        board_bg = QGraphicsRectItem(start_x - spacing*2, start_y - spacing*2, board_bg_size, board_bg_size)
+        board_bg.setBrush(QColor(0,0,0,150))
+        board_bg.setPen(QPen(Qt.NoPen)) # Eliminar el borde del fondo
+        self.scene.addItem(board_bg)
 
         for row in range(4):
             row_cells = []
             for col in range(4):
-                cell = CellItem(row, col, self)
+                cell = CellItem(row, col, self, size=cell_size) # Pasar el nuevo tamaño
                 x = start_x + col * (cell_size + spacing)
                 y = start_y + row * (cell_size + spacing)
                 cell.setPos(x, y)
