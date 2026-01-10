@@ -279,14 +279,14 @@ class CellItem(QGraphicsRectItem):
 
         # Tamaño de celda
         self.setRect(QRectF(0, 0, 100, 100))
-        self.setPen(QPen(QColor("#FFD700"), 2))
+        self.setPen(QPen(QColor("#A9A9A9"), 2))
         self.setBrush(QColor("#000000"))
 
         self.setAcceptHoverEvents(True)
 
     def hoverEnterEvent(self, event):
         if self.piece_item is None:  # Solo resaltar si está vacía
-            self.setBrush(QColor("#FFD700"))
+            self.setBrush(QColor("#D3D3D3"))
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
@@ -471,14 +471,14 @@ class GameBoard(QWidget):
         """Crea el display que muestra de quién es el turno"""
         # Crear rectángulo de fondo
         self.turn_display_bg = QGraphicsRectItem(0, 0, 100, 60)
-        self.turn_display_bg.setPen(QPen(QColor("#FFD700"), 2))
+        self.turn_display_bg.setPen(QPen(QColor("#A9A9A9"), 2))
         self.turn_display_bg.setBrush(QColor(0, 0, 0, 200))
         self.turn_display_bg.setPos(405, 30)
         self.scene.addItem(self.turn_display_bg)
         
         # Crear texto
         self.turn_display_text = QGraphicsTextItem("  TURNO")
-        self.turn_display_text.setDefaultTextColor(QColor("#FFD700"))
+        self.turn_display_text.setDefaultTextColor(QColor("#A9A9A9"))
         font = QFont("Arial", 12, QFont.Bold)
         self.turn_display_text.setFont(font)
         self.turn_display_text.setPos(415, 35)
@@ -603,8 +603,7 @@ class GameBoard(QWidget):
         piece_item.snap_to_cell(cell)
         cell.piece_item = piece_item
         
-        # Actualizar el color de la celda
-        cell.setBrush(QColor("#9c9a17"))
+        cell.setBrush(QColor("#808080"))
         
         return True
 
@@ -636,7 +635,7 @@ class GameBoard(QWidget):
     def create_simple_container(self, x, y, w, h):
         """Crea un contenedor simple sin rotación"""
         container = QGraphicsRectItem(0, 0, w, h)
-        container.setPen(QPen(QColor("#FFD700"), 3))
+        container.setPen(QPen(QColor("#A9A9A9"), 3))
         container.setBrush(QColor(0, 0, 0, 180))
         container.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
         container.setPos(x, y)
@@ -646,7 +645,7 @@ class GameBoard(QWidget):
     def create_container(self, x, y, w, h, rotate=True, label=""):
         """Crea un contenedor con opción de rotación"""
         container = QGraphicsRectItem(0, 0, w, h)
-        container.setPen(QPen(QColor("#FFD700"), 2))
+        container.setPen(QPen(QColor("#A9A9A9"), 2))
         container.setBrush(QColor(0, 0, 0, 180))
         container.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
         container.setPos(x, y)
@@ -657,10 +656,10 @@ class GameBoard(QWidget):
 
         # Líneas de cuadrícula
         for i in range(5):
-            line = self.scene.addLine(i * 60, 0, i * 60, h, QPen(QColor("#FFD700"), 1))
+            line = self.scene.addLine(i * 60, 0, i * 60, h, QPen(QColor("#A9A9A9"), 1))
             line.setParentItem(container)
         for j in range(3):
-            line = self.scene.addLine(0, j * 60, w, j * 60, QPen(QColor("#FFD700"), 1))
+            line = self.scene.addLine(0, j * 60, w, j * 60, QPen(QColor("#A9A9A9"), 1))
             line.setParentItem(container)
                 
         return container
@@ -671,24 +670,24 @@ class GameBoard(QWidget):
         # Lista de todas las piezas con sus propiedades y posiciones iniciales
         pieces_data = [
             # Piezas negras - Container 1
-            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/bc0.png", 0, 0, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/bc1.png", 60, 0, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/bc2.png", 120, 0, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/bc3.png", 180, 0, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/bs0.png", 0, 60, self.container1),
-            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/bs1.png", 60, 60, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/bs2.png", 120, 60, self.container1),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/bs3.png", 180, 60, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc0.png", 0, 0, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bc1.png", 60, 0, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc2.png", 120, 0, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bc3.png", 180, 0, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs0.png", 0, 60, self.container1),
+            (Piece(Size.TALL, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bs1.png", 60, 60, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs2.png", 120, 60, self.container1),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/bs3.png", 180, 60, self.container1),
             
             # Piezas blancas - Container 2
-            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/gc0.png", 0, 0, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/gc1.png", 60, 0, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/gc2.png", 120, 0, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "./quartopy/gui/assets/images/gc3.png", 180, 0, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/gs0.png", 0, 60, self.container2),
-            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/gs1.png", 60, 60, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/gs2.png", 120, 60, self.container2),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "./quartopy/gui/assets/images/gs3.png", 180, 60, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc0.png", 0, 0, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gc1.png", 60, 0, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc2.png", 120, 0, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gc3.png", 180, 0, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs0.png", 0, 60, self.container2),
+            (Piece(Size.TALL, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gs1.png", 60, 60, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs2.png", 120, 60, self.container2),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH), "Quartopy/quartopy/gui/assets/images/gs3.png", 180, 60, self.container2),
         ]
         
         # Crear todas las piezas
@@ -727,7 +726,7 @@ class GameBoard(QWidget):
     # ================================================================
     def update_cell_visual(self, row, col):
         cell = self.cells[row][col]
-        cell.setBrush(QColor("#9c9a17"))
+        cell.setBrush(QColor("#808080"))
 
     def reset_board(self):
         # Limpiar tablero lógico
