@@ -448,12 +448,42 @@ class GameBoard(QWidget):
         self.quarto_game.export_history_to_csv(match_number=self.match_number, winner=winner_name or "Tie")
         self.match_number += 1
 
+        msg = QMessageBox(self)
+        msg.setStyleSheet(
+            """
+            QMessageBox {
+                background-color: white;
+            }
+            QMessageBox QLabel {
+                color: black;
+                background-color: transparent;
+            }
+            QMessageBox QPushButton {
+                background-color: #E1E1E1;
+                color: black;
+                border: 1px solid #ADADAD;
+                padding: 5px;
+                min-width: 50px;
+            }
+            QMessageBox QPushButton:hover {
+                background-color: #BEBEBE;
+            }
+            """
+        )
         if winner_name:
-            QMessageBox.information(self, "¡Quarto!", f"¡El jugador {winner_name} ha ganado!")
+            msg.setWindowTitle("¡Victoria!")
+            msg.setText(f"¡El jugador {winner_name} ha ganado!")
+            msg.setIcon(QMessageBox.Information)
         elif self.logic_board.is_full():
-            QMessageBox.information(self, "¡Empate!", "El tablero está lleno. ¡Es un empate!")
+            msg.setWindowTitle("¡Empate!")
+            msg.setText("El tablero está lleno.")
+            msg.setIcon(QMessageBox.Warning)
         else:
-            QMessageBox.warning(self, "Error", "El juego ha terminado por un error inesperado.")
+            msg.setWindowTitle("Error")
+            msg.setText("El juego ha terminado por un error inesperado.")
+            msg.setIcon(QMessageBox.Warning)
+        
+        msg.exec_()
 
     def go_back_to_menu(self):
         self.reset_board()
