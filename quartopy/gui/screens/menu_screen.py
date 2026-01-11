@@ -1,7 +1,7 @@
 import os
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QMovie
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout
+from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtGui import QPainter, QPixmap
 
 class MenuScreen(QWidget):
     """
@@ -10,39 +10,19 @@ class MenuScreen(QWidget):
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setWindowTitle("Menú Principal - Quarto")
-        self.setGeometry(180, 150, 1000, 525)
 
-        # Ruta del fondo
-        background_image_path = os.path.join(
-            os.path.dirname(__file__), '../assets/images/Background.jpg'
-        )
-        background_image_path = os.path.abspath(background_image_path)
+        self.background_pixmap = QPixmap(os.path.join(os.path.dirname(__file__), '../assets/images/Background.jpg'))
 
-        # Label para el fondo 
-        self.bg_label = QLabel(self)
-        self.bg_label.setGeometry(0, 0, self.width(), self.height())
-        #self.bg_label.setScaledContents(True)  # Ajusta la imagen al tamaño del label
-        self.bg_label.lower()  # Asegura que el label quede detrás de los botones
-
-        movie = QMovie(background_image_path)
-        self.bg_label.setMovie(movie)
-        movie.start()
-
-
-        pocy= 350
         # Título
         self.title_label = QLabel("Menú Principal - Quarto", self)
         self.title_label.setStyleSheet("font-size: 20pt; font-weight: bold; color : #FFD700;")
         self.title_label.setAlignment(Qt.AlignCenter)
-        self.title_label.resize(500, 50)
-        self.title_label.move(250, 80)
-
+        self.title_label.setFixedHeight(50)
 
         btn_style = """
             QPushButton {
-                background-color: rgba(0, 0, 0, 180);  /* Fondo transparente */
+                background-color: rgba(0, 0, 0, 180);
                 color: white;
                 border: 2px solid white;
                 padding: 15px;
@@ -50,31 +30,51 @@ class MenuScreen(QWidget):
                 border-radius: 10px;
             }
             QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30); /* Un ligero color blanco/gris al pasar el ratón */
+                background-color: rgba(255, 255, 255, 30);
             }
         """
 
-        # Botón 1: Jugar
-        self.btn_play = QPushButton('Jugar contra IA', self)
-        self.btn_play.resize(300, 60)
-        self.btn_play.move(pocy, 190)
+        # Botones
+        self.btn_play = QPushButton('Jugar', self)
         self.btn_play.setStyleSheet(btn_style)
+        self.btn_play.setFixedSize(300, 60)
 
-        # Botón 2: Multijugador
         self.btn_record = QPushButton('Tabla de puntajes', self)
-        self.btn_record.resize(300, 60)
-        self.btn_record.move(pocy, 265)
         self.btn_record.setStyleSheet(btn_style)
+        self.btn_record.setFixedSize(300, 60)
 
-        # Botón 3: Reglas
         self.btn_rules = QPushButton('Reglas del Juego', self)
-        self.btn_rules.resize(300, 60)
-        self.btn_rules.move(pocy, 340)
         self.btn_rules.setStyleSheet(btn_style)
+        self.btn_rules.setFixedSize(300, 60)
 
-        # Botón 4: Salir
         self.btn_exit = QPushButton('Salir', self)
-        self.btn_exit.resize(300, 60)
-        self.btn_exit.move(pocy, 415)
         self.btn_exit.setStyleSheet(btn_style)
+        self.btn_exit.setFixedSize(300, 60)
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addStretch(1)
+        layout.addWidget(self.title_label, 0, Qt.AlignCenter)
+        layout.addSpacing(30)
+        layout.addWidget(self.btn_play, 0, Qt.AlignCenter)
+        layout.addWidget(self.btn_record, 0, Qt.AlignCenter)
+        layout.addWidget(self.btn_rules, 0, Qt.AlignCenter)
+        layout.addWidget(self.btn_exit, 0, Qt.AlignCenter)
+        layout.addStretch(1)
+        
+        self.setLayout(layout)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        
+        # Escalar la imagen para que llene el widget manteniendo la relación de aspecto (cover)
+        scaled_pixmap = self.background_pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+        
+        # Centrar la imagen escalada
+        x = int((self.width() - scaled_pixmap.width()) / 2)
+        y = int((self.height() - scaled_pixmap.height()) / 2)
+        
+        painter.drawPixmap(x, y, scaled_pixmap)
+        
+        super().paintEvent(event)
 

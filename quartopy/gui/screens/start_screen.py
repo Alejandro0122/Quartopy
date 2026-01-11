@@ -1,30 +1,14 @@
 import os
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QMovie
+from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout
+from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtGui import QPainter, QPixmap
 
 class StartScreen(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        # Tamaño de la ventana
         self.setWindowTitle('Quarto - Inicio')
 
-        # Ruta del fondo
-        background_image_path = os.path.join(
-            os.path.dirname(__file__), '../assets/images/Background.jpg'
-        )
-        background_image_path = os.path.abspath(background_image_path)
-
-        # Label para el fondo (permite GIF animado)
-        self.bg_label = QLabel(self)
-        self.bg_label.setGeometry(0, 0, self.width(), self.height())
-        self.bg_label.setScaledContents(True)  # Ajusta la imagen al tamaño del label
-        self.bg_label.lower()  # Asegura que el label quede detrás de los botones
-
-        movie = QMovie(background_image_path)
-        self.bg_label.setMovie(movie)
-        movie.start()
+        self.background_pixmap = QPixmap(os.path.join(os.path.dirname(__file__), '../assets/images/Background.jpg'))
 
         # Título
         self.title_label = QLabel("¡Bienvenido al Juego Quarto!", self)
@@ -32,17 +16,16 @@ class StartScreen(QWidget):
             font-size: 24pt;
             font-weight: bold;
             color: white;
-            background-color: rgba(0, 0, 0, 100);  /* Fondo semitransparente */
+            background-color: rgba(0, 0, 0, 100);
             padding: 10px;
             border-radius: 10px;
         """)
         self.title_label.setAlignment(Qt.AlignCenter)
-        self.title_label.resize(600, 60)
-        self.title_label.move((self.width() - self.title_label.width()) // 2, 50)
+        self.title_label.setFixedSize(600, 80)
 
         self.btn_style = ("""
             QPushButton {
-                background-color: rgba(0, 0, 0, 180);  /* Fondo oscuro semitransparente */
+                background-color: rgba(0, 0, 0, 180);
                 color: white;
                 border: 2px solid white;
                 padding: 15px;
@@ -54,21 +37,37 @@ class StartScreen(QWidget):
             }
         """)
 
-        # Botón para comenzar
+        # Botones
         self.start_button = QPushButton('Comenzar a Jugar', self)
         self.start_button.setStyleSheet(self.btn_style)
-        self.start_button.resize(300, 60)
-        self.start_button.move(350, 250)
-
-        # Botón para salir
+        self.start_button.setFixedSize(300, 60)
         self.exit_button = QPushButton('Salir', self)
         self.exit_button.setStyleSheet(self.btn_style)
-        self.exit_button.resize(300, 60)
-        self.exit_button.move(350, 325)
+        self.exit_button.setFixedSize(300, 60)
 
-        # Ajuste dinámico del fondo si se cambia el tamaño de la ventana
-        self.resizeEvent = self.on_resize
+        # Layout
+        layout = QVBoxLayout(self)
+        layout.addStretch(1)
+        layout.addWidget(self.title_label, 0, Qt.AlignCenter)
+        layout.addSpacing(30)
+        layout.addWidget(self.start_button, 0, Qt.AlignCenter)
+        layout.addWidget(self.exit_button, 0, Qt.AlignCenter)
+        layout.addStretch(1)
 
-    def on_resize(self, event):
-        self.bg_label.setGeometry(0, 0, self.width(), self.height())
-        self.title_label.move((self.width() - self.title_label.width()) // 2, 50)
+        self.setLayout(layout)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        target_rect = QRect(0, 0, self.width(), self.height())
+        
+        # Escalar la imagen para que llene el widget manteniendo la relación de aspecto (cover)
+        scaled_pixmap = self.background_pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+        
+        # Centrar la imagen escalada
+        x = int((self.width() - scaled_pixmap.width()) / 2)
+        y = int((self.height() - scaled_pixmap.height()) / 2)
+        
+        painter.drawPixmap(x, y, scaled_pixmap)
+        
+        super().paintEvent(event)
+

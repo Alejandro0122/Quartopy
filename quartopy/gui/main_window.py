@@ -13,20 +13,9 @@ class MainWindow(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        
-        self.setWindowFlags(Qt.FramelessWindowHint)
 
         self.setWindowTitle('Juego Quarto')
-        self.setGeometry(180, 150, 1000, 500)
-
-        self.title_bar = QWidget(self)
-        self.title_bar.setGeometry(0, 0, self.width(), 30)
-        self.title_bar.setStyleSheet("background-color: black;")
-        
-        # 4. Colocar el título del juego en esta barra
-        self.custom_title_label = QLabel("Juego Quarto", self.title_bar)
-        self.custom_title_label.setStyleSheet("color: white; font-weight: bold;")
-        self.custom_title_label.move(5, 5) # Pequeño margen
+        self.showFullScreen()
         
         # Crea el QStackedWidget que contendrá todas las pantallas
         self.stacked_widget = QStackedWidget()
@@ -47,6 +36,7 @@ class MainWindow(QMainWindow):
 
         # Conexiones: Conecta la señal de la pantalla de inicio a la función de navegación
         self.start_screen.start_button.clicked.connect(self.show_menu)
+        self.start_screen.exit_button.clicked.connect(self.close)
         
         # Conexiones de MenuScreen
         self.menu_screen.btn_exit.clicked.connect(self.close)
@@ -66,8 +56,6 @@ class MainWindow(QMainWindow):
 
     def show_menu(self):
         """Muestra la pantalla del menú (Índice 1)."""
-        self.setFixedSize(1000, 500)
-        self.move(180, 150)
         self.stacked_widget.setCurrentWidget(self.menu_screen)
         
     def show_start(self):
@@ -80,8 +68,6 @@ class MainWindow(QMainWindow):
 
     def show_game(self):
         """Muestra la pantalla del tablero de juego (Índice 2)."""
-        self.setFixedSize(930, 600)
-        self.move(250, 100)
         self.stacked_widget.setCurrentIndex(2)
         if self.game_board and hasattr(self.game_board, 'view'):
             # Desactiva la barra de desplazamiento horizontal
@@ -125,10 +111,6 @@ class MainWindow(QMainWindow):
 
         self.stacked_widget.addWidget(self.game_board)
         self.stacked_widget.setCurrentWidget(self.game_board) # Mostrar el nuevo GameBoard
-        
-        # Ajustar el tamaño de la ventana para el GameBoard
-        self.setFixedSize(930, 600)
-        self.move(250, 100)
         
         if self.game_board and hasattr(self.game_board, 'view'):
             self.game_board.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
