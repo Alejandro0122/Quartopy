@@ -13,6 +13,7 @@ from quartopy.game.board import Board
 from quartopy.game.piece import Piece, Size, Coloration, Shape, Hole
 from quartopy.bot.human import Quarto_bot as HumanBot
 from quartopy.bot.random_bot import Quarto_bot as RandomBot
+from quartopy.bot.minimax_bot import MinimaxBot
 from quartopy.models.Bot import BotAI
 from quartopy.game.quarto_game import QuartoGame
 
@@ -138,7 +139,7 @@ class PieceItem(QGraphicsPixmapItem):
                     self.parent_board.selected_piece_for_c3 = self.piece # Set for human
                     self.parent_board.current_turn = "HUMAN"
                     self.parent_board.update_turn_display()
-                else: # next_player_type is 'random_bot'
+                else: # next_player_type is 'random_bot' or 'minimax_bot'
                     self.parent_board.human_action_phase = "IDLE" # No hay acción humana directa
                     self.parent_board.current_turn = "BOT"
                     self.parent_board.update_turn_display()
@@ -197,7 +198,7 @@ class PieceItem(QGraphicsPixmapItem):
                         self.parent_board.human_action_phase = "PICK_TO_C4"
                         self.parent_board.current_turn = "HUMAN"
                         self.parent_board.update_turn_display()
-                    else: # next_player_type is 'random_bot'
+                    else: # next_player_type is 'random_bot' or 'minimax_bot'
                         self.parent_board.human_action_phase = "IDLE" # No hay acción humana directa
                         self.parent_board.current_turn = "BOT"
                         self.parent_board.update_turn_display()
@@ -391,17 +392,16 @@ class GameBoard(QWidget):
         self.create_turn_display() # This creates QGraphicsItems in self.scene
 
         # --- Common game logic setup ---
-        self.player1_instance: BotAI
-        if self.player1_type == 'human':
-            self.player1_instance = HumanBot(name=self.player1_name)
-        else: # 'random_bot'
-            self.player1_instance = RandomBot(name=self.player1_name)
+        def create_player(p_type, p_name):
+            if p_type == 'human':
+                return HumanBot(name=p_name)
+            elif p_type == 'minimax_bot':
+                return MinimaxBot(name=p_name)
+            else:  # 'random_bot'
+                return RandomBot(name=p_name)
 
-        self.player2_instance: BotAI
-        if self.player2_type == 'human':
-            self.player2_instance = HumanBot(name=self.player2_name)
-        else: # 'random_bot'
-            self.player2_instance = RandomBot(name=self.player2_name)
+        self.player1_instance = create_player(self.player1_type, self.player1_name)
+        self.player2_instance = create_player(self.player2_type, self.player2_name)
             
         self.quarto_game = QuartoGame(
             player1=self.player1_instance, 
@@ -420,7 +420,7 @@ class GameBoard(QWidget):
         if self.player1_type == 'human':
             self.human_action_phase = "PICK_TO_C4"
             self.current_turn = "HUMAN"
-        else: # player1_type is 'random_bot'
+        else: # player1_type is a bot
             self.current_turn = "BOT"
 
         # --- Crear TODAS las piezas ---
@@ -440,7 +440,7 @@ class GameBoard(QWidget):
             QTimer.singleShot(500, self.handle_bot_turn)
 
     def end_game(self, winner_name=None):
-        """Maneja el fin del juego, muestra el resultado y guarda la partida."""
+        """Maneja el fin del juego con una ventana más ancha y elegante."""
         self.game_over = True
         self.current_turn = "GAME_OVER"
         self.update_turn_display()
@@ -450,39 +450,54 @@ class GameBoard(QWidget):
         self.match_number += 1
 
         msg = QMessageBox(self)
+        
+        # Estilo visual: Negro puro, texto blanco y ancho expandido
         msg.setStyleSheet(
             """
             QMessageBox {
-                background-color: white;
+                background-color: #000000;
+                min-width: 500px; /* Aquí controlas el ancho de la ventana */
+                border: 1px solid #FFFFFF;
             }
-            QMessageBox QLabel {
-                color: black;
-                background-color: transparent;
+            QLabel {
+                color: #FFFFFF;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 20px;
+                font-weight: bold;
+                padding-left: 50px; /* Espacio extra a los lados para que respire */
+                padding-right: 50px;
+                padding-top: 20px;
+                padding-bottom: 20px;
             }
-            QMessageBox QPushButton {
-                background-color: #E1E1E1;
-                color: black;
-                border: 1px solid #ADADAD;
-                padding: 5px;
-                min-width: 50px;
+            QPushButton {
+                background-color: #000000;
+                color: white;
+                border: 2px solid #FFFFFF;
+                padding: 10px 40px;
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 10px;
+                margin-right: 20px;
             }
-            QMessageBox QPushButton:hover {
-                background-color: #BEBEBE;
+            QPushButton:hover {
+                background-color: #FFFFFF;
+                color: #000000;
             }
             """
         )
+
         if winner_name:
             msg.setWindowTitle("¡Victoria!")
-            msg.setText(f"¡El jugador {winner_name} ha ganado!")
-            msg.setIcon(QMessageBox.Information)
+            msg.setText(f"🏆 ¡FELICIDADES! 🏆\n\nEl jugador {winner_name.upper()} ha ganado la partida.")
         elif self.logic_board.is_full():
             msg.setWindowTitle("¡Empate!")
-            msg.setText("El tablero está lleno.")
-            msg.setIcon(QMessageBox.Warning)
+            msg.setText("🤝 EMPATE\n\nEl tablero está lleno.")
         else:
-            msg.setWindowTitle("Error")
-            msg.setText("El juego ha terminado por un error inesperado.")
-            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle("Aviso")
+            msg.setText("PARTIDA FINALIZADA")
+
+        # Eliminamos el icono predeterminado para que el texto ocupe todo el ancho
+        msg.setIcon(QMessageBox.NoIcon)
         
         msg.exec_()
 
@@ -492,7 +507,7 @@ class GameBoard(QWidget):
         self.back_to_menu_signal.emit()
 
     def _get_current_player_type(self) -> str:
-        """Retorna el tipo del jugador actual ('human' o 'random_bot')."""
+        """Retorna el tipo del jugador actual ('human', 'random_bot', or 'minimax_bot')."""
         if self.quarto_game.turn: # Player 1
             return self.player1_type
         else: # Player 2
@@ -885,7 +900,7 @@ class GameBoard(QWidget):
                 self.update_turn_display()
                 self.update()
                 print(f"[DEBUG] Next is human to pick: {self.human_action_phase}")
-            else: # next_player_type is 'random_bot'
+            else: # next_player_type is a bot
                 self.human_action_phase = "IDLE" # No hay acción humana directa
                 self.current_turn = "BOT"
                 self.update_turn_display()
@@ -952,7 +967,7 @@ class GameBoard(QWidget):
                 self.update_turn_display()
                 self.update()
                 print(f"[DEBUG] Next is human to place: {self.human_action_phase}")
-            else: # next_player_type is 'random_bot'
+            else: # next_player_type is a bot
                 self.human_action_phase = "IDLE" # No hay acción humana directa
                 self.current_turn = "BOT"
                 self.update_turn_display()

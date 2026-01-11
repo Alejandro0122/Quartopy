@@ -75,7 +75,7 @@ class TypePlayerScreen(QWidget):
         
         self.player1_combo = QComboBox()
         self.player1_combo.setFont(QFont("Arial", 11))
-        self.player1_combo.addItems(["Humano", "Bot Aleatorio"])
+        self.player1_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax"])
         self.player1_combo.setStyleSheet("""
             QComboBox {
                 background-color: #2a2a2a;
@@ -116,7 +116,7 @@ class TypePlayerScreen(QWidget):
         
         self.player2_combo = QComboBox()
         self.player2_combo.setFont(QFont("Arial", 11))
-        self.player2_combo.addItems(["Humano", "Bot Aleatorio"])
+        self.player2_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax"])
         self.player2_combo.setStyleSheet(self.player1_combo.styleSheet())
         
         # Nota para Jugador 2
@@ -223,31 +223,33 @@ class TypePlayerScreen(QWidget):
         player2_type = self.player2_combo.currentText()
         
         # Actualizar colores de los combobox según selección
-        player1_style = self.player1_combo.styleSheet()
-        player2_style = self.player2_combo.styleSheet()
-        
-        if player1_type == "Humano":
-            player1_style = player1_style.replace("border: 1px solid #555;", "border: 2px solid #4CAF50;")
-        else:
-            player1_style = player1_style.replace("border: 1px solid #555;", "border: 2px solid #2196F3;")
-            
-        if player2_type == "Humano":
-            player2_style = player2_style.replace("border: 1px solid #555;", "border: 2px solid #4CAF50;")
-        else:
-            player2_style = player2_style.replace("border: 1px solid #555;", "border: 2px solid #2196F3;")
-            
-        self.player1_combo.setStyleSheet(player1_style)
-        self.player2_combo.setStyleSheet(player2_style)
-    
+        base_style = self.player1_combo.styleSheet()
+
+        def get_style_for_type(p_type, style):
+            if p_type == "Humano":
+                return style.replace("border: 1px solid #555;", "border: 2px solid #4CAF50;")
+            elif p_type == "Bot Minimax":
+                return style.replace("border: 1px solid #555;", "border: 2px solid #F44336;") # Red for Minimax
+            else: # Random Bot
+                return style.replace("border: 1px solid #555;", "border: 2px solid #2196F3;")
+
+        self.player1_combo.setStyleSheet(get_style_for_type(player1_type, base_style))
+        self.player2_combo.setStyleSheet(get_style_for_type(player2_type, base_style))
+
     def get_player_config(self):
         """Obtiene la configuración de jugadores seleccionada"""
-        player1_type = self.player1_combo.currentText()
-        player2_type = self.player2_combo.currentText()
         
-        # Convertir a formato para el juego
+        def get_player_type(combo_text):
+            if combo_text == "Humano":
+                return 'human'
+            elif combo_text == "Bot Minimax":
+                return 'minimax_bot'
+            else: # "Bot Aleatorio"
+                return 'random_bot'
+
         config = {
-            'player1': 'human' if player1_type == "Humano" else 'random_bot',
-            'player2': 'human' if player2_type == "Humano" else 'random_bot',
+            'player1': get_player_type(self.player1_combo.currentText()),
+            'player2': get_player_type(self.player2_combo.currentText()),
             'player1_name': self.player1_name,
             'player2_name': self.player2_name
         }
