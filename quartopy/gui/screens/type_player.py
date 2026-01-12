@@ -1,12 +1,12 @@
 # quartopy/gui/screens/type_player.py
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox, QInputDialog
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox,
+    QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox, QInputDialog, QLineEdit
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
-import sys
+import sys, os
 
 
 class TypePlayerScreen(QWidget):
@@ -67,30 +67,13 @@ class TypePlayerScreen(QWidget):
         config_layout.setSpacing(15)
         
         # Jugador 1
-        self.player1_label = QLabel(f"{self.player1_name}:")
-        self.player1_label.setFont(QFont("Arial", 12))
-        self.player1_label.setStyleSheet("color: #FFFFFF;")
-        
-        self.player1_edit_btn = QPushButton("Editar nombre")
-        self.player1_edit_btn.clicked.connect(self.edit_player1_name)
-        self.player1_edit_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #FFC400;
-                color: black;
-                font-weight: bold;
-                border-radius: 5px;
-                padding: 8px 16px;
-                border: 2px solid #FFC400; 
-            }
-            QPushButton:hover {
-                background-color: #FFD700;  
-                border: 2px solid #FFD700;
-            }
-            QPushButton:pressed {
-                background-color: #E6B800;  
-                border: 2px solid #E6B800;
-            }
-        """)
+        self.player1_name_edit = QLineEdit(self.player1_name)
+        self.player1_name_edit.setFont(QFont("Arial", 12))
+        self.player1_name_edit.setStyleSheet("QLineEdit { background-color: transparent; border: none; color: white; }")
+        self.player1_name_edit.setReadOnly(True)
+        self.player1_name_edit.mousePressEvent = lambda event: self.player1_name_edit.setReadOnly(False) if event.button() == Qt.LeftButton else QLineEdit.mousePressEvent(self.player1_name_edit, event)
+        self.player1_name_edit.returnPressed.connect(lambda: self.player1_name_edit.setReadOnly(True))
+        self.player1_name_edit.editingFinished.connect(lambda: self.player1_name_edit.setReadOnly(True))
         
         self.player1_combo = QComboBox()
         self.player1_combo.setFont(QFont("Arial", 11))
@@ -126,30 +109,13 @@ class TypePlayerScreen(QWidget):
         """)
         
         # Jugador 2
-        self.player2_label = QLabel(f"{self.player2_name}:")
-        self.player2_label.setFont(QFont("Arial", 12))
-        self.player2_label.setStyleSheet("color: #FFFFFF;")
-
-        self.player2_edit_btn = QPushButton("Editar nombre")
-        self.player2_edit_btn.clicked.connect(self.edit_player2_name)
-        self.player2_edit_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #FFC400;
-                color: black;
-                font-weight: bold;
-                border-radius: 5px;
-                padding: 8px 16px;
-                border: 2px solid #FFC400; 
-            }
-            QPushButton:hover {
-                background-color: #FFD700;  
-                border: 2px solid #FFD700;
-            }
-            QPushButton:pressed {
-                background-color: #E6B800;  
-                border: 2px solid #E6B800;
-            }
-        """)
+        self.player2_name_edit = QLineEdit(self.player2_name)
+        self.player2_name_edit.setFont(QFont("Arial", 12))
+        self.player2_name_edit.setStyleSheet("QLineEdit { background-color: transparent; border: none; color: white; }")
+        self.player2_name_edit.setReadOnly(True)
+        self.player2_name_edit.mousePressEvent = lambda event: self.player2_name_edit.setReadOnly(False) if event.button() == Qt.LeftButton else QLineEdit.mousePressEvent(self.player2_name_edit, event)
+        self.player2_name_edit.returnPressed.connect(lambda: self.player2_name_edit.setReadOnly(True))
+        self.player2_name_edit.editingFinished.connect(lambda: self.player2_name_edit.setReadOnly(True))
         
         self.player2_combo = QComboBox()
         self.player2_combo.setFont(QFont("Arial", 11))
@@ -160,13 +126,11 @@ class TypePlayerScreen(QWidget):
         self.player2_note = QLabel("")
         
         # Añadir widgets al layout
-        config_layout.addWidget(self.player1_label, 0, 0)
+        config_layout.addWidget(self.player1_name_edit, 0, 0)
         config_layout.addWidget(self.player1_combo, 0, 1)
-        config_layout.addWidget(self.player1_edit_btn, 0, 2)
 
-        config_layout.addWidget(self.player2_label, 1, 0)
+        config_layout.addWidget(self.player2_name_edit, 1, 0)
         config_layout.addWidget(self.player2_combo, 1, 1)
-        config_layout.addWidget(self.player2_edit_btn, 1, 2)
         
         config_group.setLayout(config_layout)
         layout.addWidget(config_group)
@@ -176,7 +140,6 @@ class TypePlayerScreen(QWidget):
         self.mode_2x2_checkbox.setFont(QFont("Arial", 14))
         layout.addWidget(self.mode_2x2_checkbox, alignment=Qt.AlignCenter)
         self.mode_2x2_checkbox.setChecked(False) 
-        layout.addWidget(self.mode_2x2_checkbox)
         self.mode_2x2_checkbox.setStyleSheet("""
     QCheckBox {
         color: white;
@@ -258,19 +221,6 @@ class TypePlayerScreen(QWidget):
         # Configuración inicial
         self.update_ui()
     
-    def edit_player1_name(self):
-        new_name, ok = QInputDialog.getText(self, "Editar", "Nuevo nombre para Jugador 1:", text=self.player1_name)
-        if ok and new_name:
-            self.player1_name = new_name
-            self.player1_label.setText(f"{self.player1_name}:")
-
-    def edit_player2_name(self):
-        new_name, ok = QInputDialog.getText(self, "Editar", "Nuevo nombre para Jugador 2:", text=self.player2_name)
-        if ok and new_name:
-            self.player2_name = new_name
-            self.player2_label.setText(f"{self.player2_name}:")
-
-    
     def update_ui(self):
         """Actualiza la interfaz según las selecciones"""
         player1_type = self.player1_combo.currentText()
@@ -304,8 +254,8 @@ class TypePlayerScreen(QWidget):
         config = {
             'player1': get_player_type(self.player1_combo.currentText()),
             'player2': get_player_type(self.player2_combo.currentText()),
-            'player1_name': self.player1_name,
-            'player2_name': self.player2_name
+            'player1_name': self.player1_name_edit.text(),
+            'player2_name': self.player2_name_edit.text()
         }
         
         return config
@@ -328,10 +278,10 @@ class TypePlayerScreen(QWidget):
         # Restablecer selecciones por defecto
         self.player1_combo.setCurrentIndex(0)  # Humano
         self.player2_combo.setCurrentIndex(1)  # Bot Aleatorio
-        self.player1_name = "Jugador 1"
-        self.player2_name = "Jugador 2"
-        self.player1_label.setText(f"{self.player1_name}")
-        self.player2_label.setText(f"{self.player2_name}")
+        self.player1_name_edit.setText("Jugador 1")
+        self.player1_name_edit.setReadOnly(True)
+        self.player2_name_edit.setText("Jugador 2")
+        self.player2_name_edit.setReadOnly(True)
 
 
 # Función de ejemplo para integrar esta pantalla
