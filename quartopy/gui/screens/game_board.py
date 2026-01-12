@@ -52,17 +52,22 @@ class PieceItem(QGraphicsPixmapItem):
 
         game = self.parent_board.quarto_game
 
-        # --- NUEVA LÓGICA DE CLIC-PARA-SELECCIONAR (CON CONDICIÓN) ---
-        if self.parent_board.click_to_select_enabled and \
-           self.parent_board.human_action_phase == "PICK_TO_C4" and \
+        # --- LÓGICA DE CLIC-PARA-SELECCIONAR (CON Y SIN CONFIRMACIÓN) ---
+        if self.parent_board.human_action_phase == "PICK_TO_C4" and \
            not self.is_on_board and not self.is_in_container_3_or_4:
             
-            msg = QMessageBox()
-            msg.setWindowFlags(Qt.FramelessWindowHint)
-            msg.setText("¿Deseas seleccionar esta pieza para tu oponente?")
-            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            msg.setDefaultButton(QMessageBox.Yes)
-            msg.setStyleSheet("""
+            # Resaltar la celda de la pieza
+            self.parent_board.highlight_rect.setPos(self.pos())
+            self.parent_board.highlight_rect.show()
+
+            # Si la confirmación está habilitada, preguntar al usuario
+            if self.parent_board.click_to_select_enabled:
+                msg = QMessageBox()
+                msg.setWindowFlags(Qt.FramelessWindowHint)
+                msg.setText("¿Deseas seleccionar esta pieza para tu oponente?")
+                msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+                msg.setDefaultButton(QMessageBox.Yes)
+                msg.setStyleSheet("""
     QMessageBox {
         background-color: #1a1a1a;
         color: white;
@@ -103,11 +108,15 @@ QDialogButtonBox {
         border: 2px solid white;  
     }
 """)
-
-            if msg.exec_() == QMessageBox.Yes:
-                self.parent_board.handle_piece_selection(self)
-                event.accept()
-                return
+                if msg.exec_() != QMessageBox.Yes: # User clicked No
+                    self.parent_board.clear_piece_highlight() # Clear highlight if canceled
+                    event.ignore()
+                    return
+            
+            # Proceder con la selección (si no hay confirmación o si fue "Yes")
+            self.parent_board.handle_piece_selection(self)
+            event.accept()
+            return
 
         # --- LÓGICA DE ARRASTRE Y SUELTE (EXISTENTE) ---
         if self.parent_board.human_action_phase == "PICK_TO_C4":
@@ -169,6 +178,7 @@ QDialogButtonBox {
     
     def return_to_original(self):
         """Regresa la pieza a su posición original"""
+        self.parent_board.clear_piece_highlight()
         if self.is_on_board and self.board_position:
             # Si estaba en el tablero, mantenerla ahí
             row, col = self.board_position
@@ -437,15 +447,25 @@ class GameBoard(QWidget):
                 background-color: rgba(50, 50, 50, 200);
             }
         """
-        self.btn_pausa = QPushButton('Pausa')
-        self.btn_pausa.setStyleSheet(button_style)
-        self.btn_pausa.setFixedSize(180, 50)
-        self.btn_pausa.clicked.connect(self.show_pause_menu)
+        self.btn_options = QPushButton('Opciones')
+        self.btn_options.setStyleSheet(button_style)
+        self.btn_options.setFixedSize(180, 50)
+        self.btn_options.clicked.connect(self.show_pause_menu)
 
-        proxy_pausa = QGraphicsProxyWidget()
-        proxy_pausa.setWidget(self.btn_pausa)
-        proxy_pausa.setPos(150, 520) # Posición centrada donde estaban los otros botones
-        self.scene.addItem(proxy_pausa)
+        self.btn_exit = QPushButton('Salir')
+        self.btn_exit.setStyleSheet(button_style)
+        self.btn_exit.setFixedSize(180, 50)
+        self.btn_exit.clicked.connect(self.go_back_to_menu)
+        
+        proxy_exit = QGraphicsProxyWidget()
+        proxy_exit.setWidget(self.btn_exit)
+        proxy_exit.setPos(250, 520)
+        self.scene.addItem(proxy_exit)
+
+        proxy_options = QGraphicsProxyWidget()
+        proxy_options.setWidget(self.btn_options)
+        proxy_options.setPos(50, 520) # Posición centrada donde estaban los otros botones
+        self.scene.addItem(proxy_options)
 
         # --- Tablero (QGraphicsItems within scene) ---
         self.cells = []
@@ -460,6 +480,14 @@ class GameBoard(QWidget):
         # Contenedor de piezas disponibles (cuadrado 4x4)
         piece_area_size = 4 * 60 # 4 pieces of 60px
         self.all_pieces_container = self.create_container(115, 200, piece_area_size, piece_area_size, rotate=False)
+
+        # --- Rectángulo de resaltado para piezas disponibles ---
+        self.highlight_rect = QGraphicsRectItem(0, 0, 60, 60)
+        self.highlight_rect.setBrush(QColor("white"))
+        self.highlight_rect.setPen(QPen(Qt.NoPen))
+        self.highlight_rect.setZValue(-1) # Detrás de las piezas
+        self.highlight_rect.setParentItem(self.all_pieces_container)
+        self.highlight_rect.hide()
 
         # --- Display de turno y Nametags (QGraphicsItems within scene) ---
         self.create_turn_display() # This creates QGraphicsItems in self.scene
@@ -572,7 +600,7 @@ class GameBoard(QWidget):
         )
 
         if winner_name:
-            msg.setWindowTitle("¡Victoria!")
+            msg.setWindowFlags(Qt.FramelessWindowHint)
             msg.setText(f"🏆 ¡FELICIDADES! 🏆\n\nEl jugador {winner_name.upper()} ha ganado la partida.")
         elif self.logic_board.is_full():
             msg.setWindowTitle("¡Empate!")
@@ -585,6 +613,10 @@ class GameBoard(QWidget):
         msg.setIcon(QMessageBox.NoIcon)
         
         msg.exec_()
+
+    def clear_piece_highlight(self):
+        """Oculta el rectángulo de resaltado de las piezas."""
+        self.highlight_rect.hide()
 
     def go_back_to_menu(self):
         self.reset_board()
@@ -603,6 +635,7 @@ class GameBoard(QWidget):
         Maneja la lógica de cuando un humano selecciona una pieza para el oponente,
         tanto por clic como por arrastre.
         """
+        self.clear_piece_highlight()
         game = self.quarto_game
         
         if piece_item.is_on_board:
@@ -657,7 +690,7 @@ class GameBoard(QWidget):
         font_player = QFont("Arial", 14, QFont.Bold)
         
         # --- Display de Acción ---
-        self.action_display_bg = QGraphicsRectItem(0, 0, 300, 60) # Tamaño reducido
+        self.action_display_bg = QGraphicsRectItem(0, 0, 300, 90) # Tamaño reducido
         self.action_display_bg.setPen(QPen(QColor("#FFD700"), 2))
         self.action_display_bg.setBrush(QColor(0, 0, 0, 200))
         self.action_display_bg.setPos(495, 50) # Reposicionado y centrado
@@ -666,16 +699,19 @@ class GameBoard(QWidget):
         self.action_text = QGraphicsTextItem("", self.action_display_bg)
         self.action_text.setDefaultTextColor(QColor("white"))
         self.action_text.setFont(font_title)
+        # Centrar el texto dentro del rectángulo
+        self.action_text.setTextWidth(300)
+        self.action_text.setPos(0, 10) # Ajustar posición vertical
         
         # --- Nametags de Jugadores ---
         self.player1_tag = QGraphicsSimpleTextItem("")
         self.player1_tag.setFont(font_player)
-        self.player1_tag.setPos(40, 50) # Movido hacia arriba
+        self.player1_tag.setPos(40, 50) 
         self.scene.addItem(self.player1_tag)
 
         self.player2_tag = QGraphicsSimpleTextItem("")
         self.player2_tag.setFont(font_player)
-        self.player2_tag.setPos(250, 50) # Movido hacia arriba y al lado
+        self.player2_tag.setPos(250, 50) 
         self.scene.addItem(self.player2_tag)
 
     def update_turn_display(self):
@@ -692,11 +728,11 @@ class GameBoard(QWidget):
         # Actualizar display de ACCIÓN
         action_string = ""
         if self.current_turn == "GAME_OVER":
-            action_string = "Partida Terminada"
+            action_string = "Partida Terminada<br>"
         elif self.quarto_game.pick: # Fase de seleccionar pieza
-            action_string = f"Turno de: {p_current_name}<br>Selecciona una pieza para {p_next_name}"
+            action_string = f"Turno de: {p_current_name}<br><br>Selecciona una pieza para {p_next_name}"
         else: # Fase de colocar pieza
-            action_string = f"Turno de: {p_current_name}<br>Coloca la pieza en el tablero"
+            action_string = f"Turno de: {p_current_name}<br><br>Coloca la pieza en el tablero"
         
         # Centrar el texto en el nuevo contenedor
         self.action_text.setHtml(f"<div style='text-align: center; width: 380px;'>{action_string}</div>")

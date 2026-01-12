@@ -1,7 +1,7 @@
 # quartopy/gui/screens/type_player.py
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox, QInputDialog
 )
 from PyQt5.QtGui import QFont
@@ -71,8 +71,26 @@ class TypePlayerScreen(QWidget):
         self.player1_label.setFont(QFont("Arial", 12))
         self.player1_label.setStyleSheet("color: #FFFFFF;")
         
-        self.player1_edit_btn = QPushButton("Editar")
+        self.player1_edit_btn = QPushButton("Editar nombre")
         self.player1_edit_btn.clicked.connect(self.edit_player1_name)
+        self.player1_edit_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FFC400;
+                color: black;
+                font-weight: bold;
+                border-radius: 5px;
+                padding: 8px 16px;
+                border: 2px solid #FFC400; 
+            }
+            QPushButton:hover {
+                background-color: #FFD700;  
+                border: 2px solid #FFD700;
+            }
+            QPushButton:pressed {
+                background-color: #E6B800;  
+                border: 2px solid #E6B800;
+            }
+        """)
         
         self.player1_combo = QComboBox()
         self.player1_combo.setFont(QFont("Arial", 11))
@@ -112,8 +130,26 @@ class TypePlayerScreen(QWidget):
         self.player2_label.setFont(QFont("Arial", 12))
         self.player2_label.setStyleSheet("color: #FFFFFF;")
 
-        self.player2_edit_btn = QPushButton("Editar")
+        self.player2_edit_btn = QPushButton("Editar nombre")
         self.player2_edit_btn.clicked.connect(self.edit_player2_name)
+        self.player2_edit_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FFC400;
+                color: black;
+                font-weight: bold;
+                border-radius: 5px;
+                padding: 8px 16px;
+                border: 2px solid #FFC400; 
+            }
+            QPushButton:hover {
+                background-color: #FFD700;  
+                border: 2px solid #FFD700;
+            }
+            QPushButton:pressed {
+                background-color: #E6B800;  
+                border: 2px solid #E6B800;
+            }
+        """)
         
         self.player2_combo = QComboBox()
         self.player2_combo.setFont(QFont("Arial", 11))
@@ -223,13 +259,13 @@ class TypePlayerScreen(QWidget):
         self.update_ui()
     
     def edit_player1_name(self):
-        new_name, ok = QInputDialog.getText(self, "Editar Nombre", "Nuevo nombre para Jugador 1:", text=self.player1_name)
+        new_name, ok = QInputDialog.getText(self, "Editar", "Nuevo nombre para Jugador 1:", text=self.player1_name)
         if ok and new_name:
             self.player1_name = new_name
             self.player1_label.setText(f"{self.player1_name}:")
 
     def edit_player2_name(self):
-        new_name, ok = QInputDialog.getText(self, "Editar Nombre", "Nuevo nombre para Jugador 2:", text=self.player2_name)
+        new_name, ok = QInputDialog.getText(self, "Editar", "Nuevo nombre para Jugador 2:", text=self.player2_name)
         if ok and new_name:
             self.player2_name = new_name
             self.player2_label.setText(f"{self.player2_name}:")
