@@ -23,6 +23,7 @@ class TypePlayerScreen(QWidget):
         self.player2_name = "Jugador 2"
         self.setup_ui()
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
+        self.setWindowFlags(Qt.FramelessWindowHint)
         
     def setup_ui(self):
         """Configura la interfaz de usuario"""
@@ -140,6 +141,23 @@ class TypePlayerScreen(QWidget):
         layout.addWidget(self.mode_2x2_checkbox, alignment=Qt.AlignCenter)
         self.mode_2x2_checkbox.setChecked(False) 
         layout.addWidget(self.mode_2x2_checkbox)
+        self.mode_2x2_checkbox.setStyleSheet("""
+    QCheckBox {
+        color: white;
+    }
+    QCheckBox::indicator {
+        border: 2px solid #FFC400;
+        background: #1a1a1a;
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #FFC400;
+        border: 2px solid #FFC400;
+        color: black;
+    }
+""")
         
         # Botones
         buttons_layout = QHBoxLayout()
@@ -276,8 +294,8 @@ class TypePlayerScreen(QWidget):
         self.player2_combo.setCurrentIndex(1)  # Bot Aleatorio
         self.player1_name = "Jugador 1"
         self.player2_name = "Jugador 2"
-        self.player1_label.setText(f"{self.player1_name}:")
-        self.player2_label.setText(f"{self.player2_name}:")
+        self.player1_label.setText(f"{self.player1_name}")
+        self.player2_label.setText(f"{self.player2_name}")
 
 
 # Función de ejemplo para integrar esta pantalla
@@ -290,8 +308,8 @@ def test_type_player_screen():
     def on_players_selected(config):
         if config:
             print(f"Configuración seleccionada:")
-            print(f"  Jugador 1: {config['player1']} ({config['player1_display']})")
-            print(f"  Jugador 2: {config['player2']} ({config['player2_display']})")
+            print(f"  Jugador 1 {config['player1']} ({config['player1_display']})")
+            print(f"  Jugador 2 {config['player2']} ({config['player2_display']})")
             
             # Aquí podrías iniciar el juego con esta configuración
             # Por ejemplo:

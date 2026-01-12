@@ -2,7 +2,8 @@ from asyncio.log import logger
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsView, QGraphicsScene,
     QGraphicsRectItem, QMessageBox, QPushButton, QGraphicsPixmapItem,
-    QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsTextItem, QGraphicsProxyWidget
+    QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsTextItem, QGraphicsProxyWidget,
+    QDialog, QCheckBox
 )
 from PyQt5.QtGui import QPen, QColor, QPixmap, QPainter, QFont
 from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer, pyqtSignal
@@ -48,26 +49,81 @@ class PieceItem(QGraphicsPixmapItem):
         if self.parent_board._get_current_player_type() != 'human':
             event.ignore()
             return
+
+        game = self.parent_board.quarto_game
+
+        # --- NUEVA LÓGICA DE CLIC-PARA-SELECCIONAR (CON CONDICIÓN) ---
+        if self.parent_board.click_to_select_enabled and \
+           self.parent_board.human_action_phase == "PICK_TO_C4" and \
+           not self.is_on_board and not self.is_in_container_3_or_4:
             
-        # Solo permitir mover si la pieza está en el contenedor correcto según la fase
+            msg = QMessageBox()
+            msg.setWindowFlags(Qt.FramelessWindowHint)
+            msg.setText("¿Deseas seleccionar esta pieza para tu oponente?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.Yes)
+            msg.setStyleSheet("""
+    QMessageBox {
+        background-color: #1a1a1a;
+        color: white;
+        min-width: 300px;
+        border: 1px solid white;
+    }
+    
+    QMessageBox QLabel {
+        color: white;
+        font-size: 14px;
+    }
+                            
+QDialogButtonBox {
+        qproperty-centerButtons: true;  /* Centrar botones horizontalmente */
+    }
+                            
+    QMessageBox QPushButton {
+        background-color: #FFC400;
+        color: black;
+        font-weight: bold;
+        border-radius: 5px;
+        padding: 8px 16px;
+        border: 2px solid #FFC400; 
+    }
+    
+    QMessageBox QPushButton:hover {
+        background-color: #FFD700;  /* Un poco más claro en hover */
+        border: 2px solid #FFD700;
+    }
+    
+    QMessageBox QPushButton:pressed {
+        background-color: #E6B800;  /* Un poco más oscuro en pressed */
+        border: 2px solid #E6B800;
+    }
+    
+    QMessageBox QPushButton:focus {
+        outline: none;  
+        border: 2px solid white;  
+    }
+""")
+
+            if msg.exec_() == QMessageBox.Yes:
+                self.parent_board.handle_piece_selection(self)
+                event.accept()
+                return
+
+        # --- LÓGICA DE ARRASTRE Y SUELTE (EXISTENTE) ---
         if self.parent_board.human_action_phase == "PICK_TO_C4":
-            # En esta fase, solo se pueden mover piezas que NO estén en el tablero
             if self.is_on_board:
                 event.ignore()
                 return
         elif self.parent_board.human_action_phase == "PLACE_FROM_C3":
-            # En esta fase, solo se puede mover la pieza específica de container3
             if not (self.piece == self.parent_board.selected_piece_for_c3 and 
-                    self.parentItem() == self.parent_board.container3):
+                    self.parentItem() == self.parent_board.shared_piece_container):
                 event.ignore()
                 return
         
-        # Solo guardar el estado original si no está ya en container3/4 ni en el tablero
         if not self.is_in_container_3_or_4 and not self.is_on_board:
             self.original_container = self.parentItem()
             self.original_position = self.pos()
         elif self.is_in_container_3_or_4:
-            # Si está en container3/4, guardar ese como contenedor actual
             self.current_container = self.parentItem()
         
         self.setCursor(Qt.ClosedHandCursor)
@@ -83,126 +139,24 @@ class PieceItem(QGraphicsPixmapItem):
             return
             
         current_scene_pos = self.scenePos()
-        container3_rect = self.parent_board.container3.sceneBoundingRect()
-        in_container3 = container3_rect.contains(current_scene_pos)
-        container4_rect = self.parent_board.container4.sceneBoundingRect()
+        container4_rect = self.parent_board.shared_piece_container.sceneBoundingRect()
         in_container4 = container4_rect.contains(current_scene_pos)
         closest_cell = self.parent_board.find_closest_cell(current_scene_pos)
         
         game = self.parent_board.quarto_game
 
         if self.parent_board.human_action_phase == "PICK_TO_C4":
-            if in_container4: # Human is picking a piece for the bot to place
-                # Verificar que la pieza no esté ya en el tablero
-                if self.is_on_board:
-                    self.return_to_original()
-                    super().mouseReleaseEvent(event)
-                    return
-                    
-                self.is_on_board = False
-                self.board_position = None
-                
-                # Limpiar container4 si ya hay una pieza
-                if game.selected_piece: 
-                    for item in self.parent_board.piece_items:
-                        if item.piece == game.selected_piece and item.parentItem() == self.parent_board.container4:
-                            item.return_to_original()
-                            item.is_in_container_3_or_4 = False
-                            break
-                
-                # Colocar la nueva pieza en container4
-                self.place_in_container(self.parent_board.container4)
-                self.is_in_container_3_or_4 = True
-                self.is_on_board = False
-                self.current_container = self.parent_board.container4
-                
-                # Actualizar el juego lógico
-                game.select_and_remove_piece(self.piece)
-                
-                move_info = {
-                    "player_name": game.get_current_player().name,
-                    "player_pos": game.player_turn,
-                    "action": "selected",
-                    "piece": self.piece.__repr__(verbose=True),
-                    "piece_index": self.piece.index(),
-                    "attempt": 1,
-                }
-                game.move_history.append(move_info)
-
-                game.cambiar_turno() # Cambia a fase de colocación para el siguiente jugador
-
-                # Determinar quién juega ahora (el oponente)
-                next_player_type = self.parent_board._get_current_player_type()
-                
-                if next_player_type == 'human':
-                    self.parent_board.human_action_phase = "PLACE_FROM_C3"
-                    self.parent_board.selected_piece_for_c3 = self.piece # Set for human
-                    self.parent_board.current_turn = "HUMAN"
-                    self.parent_board.update_turn_display()
-                else: # next_player_type is 'random_bot' or 'minimax_bot'
-                    self.parent_board.human_action_phase = "IDLE" # No hay acción humana directa
-                    self.parent_board.current_turn = "BOT"
-                    self.parent_board.update_turn_display()
-                    QTimer.singleShot(500, self.parent_board.handle_bot_turn)
+            if in_container4: # Human is picking a piece for the opponent
+                self.parent_board.handle_piece_selection(self)
             else:
                 self.return_to_original()
         
         elif self.parent_board.human_action_phase == "PLACE_FROM_C3":
             if closest_cell is not None and self.piece == self.parent_board.selected_piece_for_c3:
-                row, col, cell = closest_cell
+                row, col, _ = closest_cell
                 if self.parent_board.try_place_piece_on_board(self, row, col):
-                    self.is_on_board = True
-                    self.is_in_container_3_or_4 = False
-                    self.board_position = (row, col)
-                    
-                    move_info = {
-                        "player_name": game.get_current_player().name,
-                        "player_pos": game.player_turn,
-                        "action": "placed",
-                        "position": (row, col),
-                        "position_index": game.game_board.pos2index(row, col),
-                        "attempt": 1,
-                        "board_after": game.game_board.serialize(),
-                    }
-                    game.move_history.append(move_info)
-
-                    # Limpiar container3
-                    for p_item in self.parent_board.piece_items:
-                        if p_item.piece == self.piece and p_item.parentItem() == self.parent_board.container3:
-                            p_item.return_to_original()
-                            p_item.is_in_container_3_or_4 = False
-                            break
-                    
-                    # Verificar si el juego terminó
-                    if self.parent_board.logic_board.check_win(self.parent_board.quarto_game.mode_2x2):
-                        winner = self.parent_board.quarto_game.get_current_player()
-                        self.parent_board.end_game(winner.name)
-                        return
-                    
-                    # Preparar para siguiente ronda
-                    self.parent_board.selected_piece_for_c3 = None
-                    game.selected_piece = 0 # Or None, consistent with QuartoGame
-
-                    # Verificar si el juego terminó (empate)
-                    if self.parent_board.logic_board.is_full():
-                        self.parent_board.end_game()
-                        return
-                    
-                    # Cambiar el turno lógico del juego para la fase de selección del próximo jugador
-                    game.cambiar_turno() # Ahora el siguiente jugador debe seleccionar una pieza
-                    
-                    # Determinar quién juega ahora
-                    next_player_type = self.parent_board._get_current_player_type()
-                    
-                    if next_player_type == 'human':
-                        self.parent_board.human_action_phase = "PICK_TO_C4"
-                        self.parent_board.current_turn = "HUMAN"
-                        self.parent_board.update_turn_display()
-                    else: # next_player_type is 'random_bot' or 'minimax_bot'
-                        self.parent_board.human_action_phase = "IDLE" # No hay acción humana directa
-                        self.parent_board.current_turn = "BOT"
-                        self.parent_board.update_turn_display()
-                        QTimer.singleShot(500, self.parent_board.handle_bot_turn)
+                    # La lógica de éxito ha sido movida a _handle_successful_placement
+                    self.parent_board._handle_successful_placement(self, row, col)
                 else:
                     self.return_to_original()
             else:
@@ -285,6 +239,38 @@ class CellItem(QGraphicsRectItem):
 
         self.setAcceptHoverEvents(True)
 
+    def mousePressEvent(self, event):
+        """Maneja el clic en una celda para colocar una pieza automáticamente."""
+        # Comprobar si es un turno válido para esta acción
+        if (self.parent_board.game_over or
+            self.parent_board._get_current_player_type() != 'human' or
+            self.parent_board.human_action_phase != "PLACE_FROM_C3"):
+            super().mousePressEvent(event)
+            return
+
+        # Comprobar si la celda está vacía
+        if self.piece_item is not None:
+            super().mousePressEvent(event)
+            return
+        
+        # Encontrar la pieza que se debe colocar (la que está en container3)
+        piece_to_place = self.parent_board.selected_piece_for_c3
+        piece_item_to_place = None
+        for item in self.parent_board.piece_items:
+            if item.piece == piece_to_place and item.parentItem() == self.parent_board.shared_piece_container:
+                piece_item_to_place = item
+                break
+        
+        if piece_item_to_place:
+            # Intentar colocar la pieza en esta celda
+            if self.parent_board.try_place_piece_on_board(piece_item_to_place, self.row, self.col):
+                # Si tiene éxito, ejecutar la lógica post-colocación
+                self.parent_board._handle_successful_placement(piece_item_to_place, self.row, self.col)
+                event.accept()
+                return
+        
+        super().mousePressEvent(event)
+
     def hoverEnterEvent(self, event):
         if self.piece_item is None:  # Solo resaltar si está vacía
             self.setBrush(QColor("#D3D3D3"))
@@ -299,6 +285,105 @@ class CellItem(QGraphicsRectItem):
 # ================================================================
 # 🔷 Clase Tablero de Juego (GameBoard)
 # ================================================================
+# ================================================================
+# ?? Clase PauseDialog (Men� de pausa)
+# ================================================================
+class PauseDialog(QDialog):
+    def __init__(self, parent_board):
+        super().__init__(parent_board)
+        self.parent_board = parent_board
+        self.resize(400, 200)
+        self.setModal(True)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        #BORDE VENTANA COLOR GRIS
+        self.setStyleSheet("background-color: #1a1a1a; color: white;")
+
+        
+        self.layout = QVBoxLayout(self)
+        self.layout.setSpacing(20)
+        self.layout.setContentsMargins(50, 50, 50, 50)
+
+        # Título
+        title_label = QLabel("PAUSA")
+        title_label.setFont(QFont("Arial", 24, QFont.Bold))
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("color: #FFD700; padding: 50px;")
+        self.layout.addWidget(title_label)
+
+        # Checkbox
+        self.checkbox = QCheckBox("Habilitar confirmacion")
+        self.checkbox.setStyleSheet("color: white;")
+        self.checkbox.setChecked(self.parent_board.click_to_select_enabled)
+        self.layout.addWidget(self.checkbox)
+        self.checkbox.setStyleSheet("""
+    QCheckBox {
+        color: white;
+    }
+    QCheckBox::indicator {
+        border: 2px solid #FFC400;
+        background: #1a1a1a;
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #FFC400;
+        border: 2px solid #FFC400;
+        color: black;
+    }
+""")
+        
+        # Button Box
+        button_layout = QHBoxLayout()
+        self.btn_continue = QPushButton("Continuar")
+        self.btn_continue.setFont(QFont("Arial", 10, QFont.Bold))
+        self.btn_continue.setStyleSheet("""
+            QPushButton {
+                background-color: #FFD700;
+                color: black;
+                border: 2px solid #FFC400;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #FFC400;
+                border: 2px solid #FFB300;
+            }
+            QPushButton:pressed {
+                background-color: #FFB300;
+            }
+        """)
+        self.btn_main_menu = QPushButton("Volver al menu principal")
+        self.btn_main_menu.setFont(QFont("Arial", 10, QFont.Bold))
+        self.btn_main_menu.setStyleSheet("""
+            QPushButton {
+                background-color: #FFD700;
+                color: black;
+                border: 2px solid #FFC400;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #FFC400;
+                border: 2px solid #FFB300;
+            }
+            QPushButton:pressed {
+                background-color: #FFB300;
+            }
+        """)
+        
+        button_layout.addWidget(self.btn_continue)
+        button_layout.addWidget(self.btn_main_menu)
+        
+        self.layout.addLayout(button_layout)
+        
+        # Connections
+        self.btn_continue.clicked.connect(self.accept)
+        self.btn_main_menu.clicked.connect(self.go_to_main_menu)
+        
+    def go_to_main_menu(self):
+        self.parent_board.go_back_to_menu()
+        self.reject()
+
+
 class GameBoard(QWidget):
     back_to_menu_signal = pyqtSignal()
     def __init__(
@@ -338,7 +423,7 @@ class GameBoard(QWidget):
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         main_v_layout.addWidget(self.view, 1) # Add with stretch factor
 
-        # --- Buttons (as Proxy Widgets in the Scene) ---
+        # --- Botón de Pausa (como Proxy Widget en la Escena) ---
         button_style = """
             QPushButton {
                 background-color: rgba(0, 0, 0, 180);
@@ -352,26 +437,15 @@ class GameBoard(QWidget):
                 background-color: rgba(50, 50, 50, 200);
             }
         """
-        self.btn_back_to_menu = QPushButton('Volver al Menú')
-        self.btn_back_to_menu.setStyleSheet(button_style)
-        self.btn_back_to_menu.setFixedSize(180, 50)
-        self.btn_back_to_menu.clicked.connect(self.go_back_to_menu)
-        
-        self.btn_exit = QPushButton('Salir')
-        self.btn_exit.setStyleSheet(button_style)
-        self.btn_exit.setFixedSize(150, 50)
-        self.btn_exit.clicked.connect(self.close)
+        self.btn_pausa = QPushButton('Pausa')
+        self.btn_pausa.setStyleSheet(button_style)
+        self.btn_pausa.setFixedSize(180, 50)
+        self.btn_pausa.clicked.connect(self.show_pause_menu)
 
-        # Create proxy widgets and position them in the scene
-        proxy_back = QGraphicsProxyWidget()
-        proxy_back.setWidget(self.btn_back_to_menu)
-        proxy_back.setPos(60, 450)
-        self.scene.addItem(proxy_back)
-
-        proxy_exit = QGraphicsProxyWidget()
-        proxy_exit.setWidget(self.btn_exit)
-        proxy_exit.setPos(260, 450)
-        self.scene.addItem(proxy_exit)
+        proxy_pausa = QGraphicsProxyWidget()
+        proxy_pausa.setWidget(self.btn_pausa)
+        proxy_pausa.setPos(150, 520) # Posición centrada donde estaban los otros botones
+        self.scene.addItem(proxy_pausa)
 
         # --- Tablero (QGraphicsItems within scene) ---
         self.cells = []
@@ -380,9 +454,8 @@ class GameBoard(QWidget):
         # --- Contenedores de destino (3 y 4) y sus labels ---
         font = QFont("Arial", 11, QFont.Bold)
         
-        # Posicionar los contenedores de dar/colocar pieza centrados bajo los nombres de jugador, con más separación
-        self.container4 = self.create_simple_container(105, 100, 80, 80)
-        self.container3 = self.create_simple_container(285, 100, 80, 80) # Increased x for more separation
+        # Contenedor compartido para la pieza a colocar
+        self.shared_piece_container = self.create_simple_container(195, 100, 80, 80)
 
         # Contenedor de piezas disponibles (cuadrado 4x4)
         piece_area_size = 4 * 60 # 4 pieces of 60px
@@ -415,6 +488,7 @@ class GameBoard(QWidget):
         self.human_action_phase = "IDLE" # Por defecto, en espera
         self.current_turn = "IDLE"  # IDLE, HUMAN, BOT, GAME_OVER
         self.game_over = False
+        self.click_to_select_enabled = True # Controla la nueva funcionalidad
 
         # Determinar el estado inicial del juego basado en el tipo de jugador 1
         if self.player1_type == 'human':
@@ -438,6 +512,17 @@ class GameBoard(QWidget):
         # Si el jugador 1 es un bot, iniciar su turno automáticamente
         if self.current_turn == "BOT":
             QTimer.singleShot(500, self.handle_bot_turn)
+
+    def show_pause_menu(self):
+        dialog = PauseDialog(self)
+        dialog.exec_()
+        self.click_to_select_enabled = dialog.checkbox.isChecked()
+
+    def highlight_winning_line(self, winning_coords):
+        """Pinta las celdas de la línea ganadora."""
+        for row, col in winning_coords:
+            if 0 <= row < 4 and 0 <= col < 4:
+                self.cells[row][col].setBrush(QColor("#FFFFFF")) 
 
     def end_game(self, winner_name=None):
         """Maneja el fin del juego con una ventana más ancha y elegante."""
@@ -513,6 +598,59 @@ class GameBoard(QWidget):
         else: # Player 2
             return self.player2_type
 
+    def handle_piece_selection(self, piece_item):
+        """
+        Maneja la lógica de cuando un humano selecciona una pieza para el oponente,
+        tanto por clic como por arrastre.
+        """
+        game = self.quarto_game
+        
+        if piece_item.is_on_board:
+            piece_item.return_to_original()
+            return
+
+        # Limpiar container4 si ya hay una pieza seleccionada
+        if game.selected_piece:
+            for item in self.piece_items:
+                if item.piece == game.selected_piece and item.parentItem() == self.shared_piece_container:
+                    item.return_to_original()
+                    item.is_in_container_3_or_4 = False
+                    break
+
+        # Colocar la nueva pieza visualmente en container4
+        piece_item.place_in_container(self.shared_piece_container)
+        piece_item.is_in_container_3_or_4 = True
+        piece_item.is_on_board = False
+        piece_item.current_container = self.shared_piece_container
+
+        # Actualizar el juego lógico
+        game.select_and_remove_piece(piece_item.piece)
+
+        move_info = {
+            "player_name": game.get_current_player().name,
+            "player_pos": game.player_turn,
+            "action": "selected",
+            "piece": piece_item.piece.__repr__(verbose=True),
+            "piece_index": piece_item.piece.index(),
+            "attempt": 1,
+        }
+        game.move_history.append(move_info)
+
+        game.cambiar_turno() # Cambia a fase de colocación para el siguiente jugador
+
+        # Determinar quién juega ahora
+        next_player_type = self._get_current_player_type()
+        if next_player_type == 'human':
+            self.human_action_phase = "PLACE_FROM_C3"
+            self.selected_piece_for_c3 = piece_item.piece
+            self.current_turn = "HUMAN"
+            self.update_turn_display()
+        else: # bot
+            self.human_action_phase = "IDLE"
+            self.current_turn = "BOT"
+            self.update_turn_display()
+            QTimer.singleShot(500, self.handle_bot_turn)
+
     def create_turn_display(self):
         """Crea los displays de información de turno y acción."""
         font_title = QFont("Arial", 12, QFont.Bold)
@@ -562,15 +700,6 @@ class GameBoard(QWidget):
         
         # Centrar el texto en el nuevo contenedor
         self.action_text.setHtml(f"<div style='text-align: center; width: 380px;'>{action_string}</div>")
-
-        # Actualizar player tags
-        p1_type_str = "Humano" if self.player1_type == 'human' else "Bot"
-        self.player1_tag.setText(f"{self.player1_name} ({p1_type_str})")
-        self.player1_tag.setBrush(QColor("#4CAF50") if self.player1_type == 'human' else QColor("#F44336"))
-
-        p2_type_str = "Humano" if self.player2_type == 'human' else "Bot"
-        self.player2_tag.setText(f"{self.player2_name} ({p2_type_str})")
-        self.player2_tag.setBrush(QColor("#4CAF50") if self.player2_type == 'human' else QColor("#F44336"))
 
         self.scene.update()
 
@@ -650,6 +779,65 @@ class GameBoard(QWidget):
                 cell.piece_item = None
             cell.setBrush(QColor("#000000"))
 
+    def _handle_successful_placement(self, piece_item, row, col):
+        """Lógica centralizada que se ejecuta después de colocar una pieza con éxito."""
+        game = self.quarto_game
+        piece_item.is_on_board = True
+        piece_item.is_in_container_3_or_4 = False
+        piece_item.board_position = (row, col)
+
+        move_info = {
+            "player_name": game.get_current_player().name,
+            "player_pos": game.player_turn,
+            "action": "placed",
+            "position": (row, col),
+            "position_index": game.game_board.pos2index(row, col),
+            "attempt": 1,
+            "board_after": game.game_board.serialize(),
+        }
+        game.move_history.append(move_info)
+
+        # Limpiar container3 si la pieza vino de allí
+        if piece_item.parentItem() == self.shared_piece_container:
+            for p_item in self.piece_items:
+                if p_item.piece == piece_item.piece and p_item.parentItem() == self.shared_piece_container:
+                    p_item.return_to_original()
+                    p_item.is_in_container_3_or_4 = False
+                    break
+        
+        # Verificar si el juego terminó
+        has_won, winning_line = self.logic_board.check_win(self.quarto_game.mode_2x2)
+        if has_won:
+            winner = self.quarto_game.get_current_player()
+            if winning_line:
+                self.highlight_winning_line(winning_line)
+            self.end_game(winner.name)
+            return
+        
+        # Preparar para siguiente ronda
+        self.selected_piece_for_c3 = None
+        game.selected_piece = 0
+
+        # Verificar si el juego terminó (empate)
+        if self.logic_board.is_full():
+            self.end_game()
+            return
+        
+        # Cambiar el turno lógico del juego para la fase de selección
+        game.cambiar_turno()
+        
+        # Determinar quién juega ahora
+        next_player_type = self._get_current_player_type()
+        if next_player_type == 'human':
+            self.human_action_phase = "PICK_TO_C4"
+            self.current_turn = "HUMAN"
+            self.update_turn_display()
+        else:
+            self.human_action_phase = "IDLE"
+            self.current_turn = "BOT"
+            self.update_turn_display()
+            QTimer.singleShot(500, self.handle_bot_turn)
+
     # ================================================================
     def get_available_pieces(self):
         """Obtiene todas las piezas disponibles (no en tablero ni en container3/4)"""
@@ -695,22 +883,22 @@ class GameBoard(QWidget):
     def create_all_pieces(self):
         """Crea las 16 piezas completas del juego Quarto en una cuadrícula 4x4."""
         pieces_data = [
-            (Piece(Size.TALL,  Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc0.png"),
-            (Piece(Size.TALL,  Coloration.BLACK, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bc1.png"),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bc2.png"),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bc3.png"),
-            (Piece(Size.TALL,  Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs0.png"),
-            (Piece(Size.TALL,  Coloration.BLACK, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bs1.png"),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/bs2.png"),
-            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/bs3.png"),
-            (Piece(Size.TALL,  Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc0.png"),
-            (Piece(Size.TALL,  Coloration.WHITE, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gc1.png"),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gc2.png"),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gc3.png"),
-            (Piece(Size.TALL,  Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs0.png"),
-            (Piece(Size.TALL,  Coloration.WHITE, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gs1.png"),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "Quartopy/quartopy/gui/assets/images/gs2.png"),
-            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH),    "Quartopy/quartopy/gui/assets/images/gs3.png"),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/bc0.png"),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.CIRCLE, Hole.WITH),    "./quartopy/gui/assets/images/bc1.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/bc2.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.CIRCLE, Hole.WITH),    "./quartopy/gui/assets/images/bc3.png"),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/bs0.png"),
+            (Piece(Size.TALL,  Coloration.BLACK, Shape.SQUARE, Hole.WITH),    "./quartopy/gui/assets/images/bs1.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/bs2.png"),
+            (Piece(Size.LITTLE, Coloration.BLACK, Shape.SQUARE, Hole.WITH),    "./quartopy/gui/assets/images/bs3.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/gc0.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.CIRCLE, Hole.WITH),    "./quartopy/gui/assets/images/gc1.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITHOUT), "./quartopy/gui/assets/images/gc2.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.CIRCLE, Hole.WITH),    "./quartopy/gui/assets/images/gc3.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/gs0.png"),
+            (Piece(Size.TALL,  Coloration.WHITE, Shape.SQUARE, Hole.WITH),    "./quartopy/gui/assets/images/gs1.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITHOUT), "./quartopy/gui/assets/images/gs2.png"),
+            (Piece(Size.LITTLE, Coloration.WHITE, Shape.SQUARE, Hole.WITH),    "./quartopy/gui/assets/images/gs3.png"),
         ]
         
         self.piece_items = []
@@ -866,13 +1054,16 @@ class GameBoard(QWidget):
             game.move_history.append(move_info)
             
             # Limpiar container3 si la pieza estaba allí
-            if piece_item_to_place.parentItem() == self.container3:
+            if piece_item_to_place.parentItem() == self.shared_piece_container:
                 piece_item_to_place.setParentItem(None) # Quitar de container3
             
             # Verificar si hay victoria
-            if self.logic_board.check_win(self.quarto_game.mode_2x2):
+            has_won, winning_line = self.logic_board.check_win(self.quarto_game.mode_2x2)
+            if has_won:
                 winner = game.get_current_player()
                 print(f"[DEBUG] Bot {winner.name} won!")
+                if winning_line:
+                    self.highlight_winning_line(winning_line)
                 self.end_game(winner.name)
                 return
             
@@ -883,7 +1074,8 @@ class GameBoard(QWidget):
             available_pieces = self.get_available_pieces()
             print(f"[DEBUG] Available pieces: {len(available_pieces)}")
             
-            if not available_pieces and not self.logic_board.check_win():
+            if not available_pieces and not self.logic_board.check_win(self.quarto_game.mode_2x2)[0]:
+
                 print("[DEBUG] No more pieces available!")
                 self.end_game()
                 return
@@ -951,10 +1143,10 @@ class GameBoard(QWidget):
         
         if piece_item_to_move:
             # Mover la pieza visualmente a container3
-            piece_item_to_move.place_in_container(self.container3)
+            piece_item_to_move.place_in_container(self.shared_piece_container)
             piece_item_to_in_container_3_or_4 = True
             piece_item_to_move.is_on_board = False
-            piece_item_to_move.current_container = self.container3
+            piece_item_to_move.current_container = self.shared_piece_container
             
             self.selected_piece_for_c3 = selected_piece_logic # Usado por el humano para saber qué pieza colocar
             
@@ -989,4 +1181,6 @@ if __name__ == '__main__':
     window.resize(1000, 700)
     window.show()
     sys.exit(app.exec_())
+
+
 

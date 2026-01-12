@@ -10,12 +10,12 @@ class MenuScreen(QWidget):
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Menú Principal - Quarto")
+        self.setWindowTitle("Menú Principal")
 
         self.background_pixmap = QPixmap(os.path.join(os.path.dirname(__file__), '../assets/images/Background.jpg'))
 
         # Título
-        self.title_label = QLabel("Menú Principal - Quarto", self)
+        self.title_label = QLabel("Menú Principal", self)
         self.title_label.setStyleSheet("font-size: 20pt; font-weight: bold; color : #FFD700;")
         self.title_label.setAlignment(Qt.AlignCenter)
         self.title_label.setFixedHeight(50)

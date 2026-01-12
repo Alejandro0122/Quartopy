@@ -105,8 +105,7 @@ class MainWindow(QMainWindow):
             player2_name=player2_name,
             mode_2x2=mode_2x2
         )
-        # Re-conectar la señal de salida del GameBoard
-        self.game_board.btn_exit.clicked.connect(self.close)
+        # Re-conectar la señal para volver al menú
         self.game_board.back_to_menu_signal.connect(self.show_menu)
 
         self.stacked_widget.addWidget(self.game_board)
