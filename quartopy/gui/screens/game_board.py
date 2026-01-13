@@ -15,6 +15,7 @@ from quartopy.game.piece import Piece, Size, Coloration, Shape, Hole
 from quartopy.bot.human import Quarto_bot as HumanBot
 from quartopy.bot.random_bot import Quarto_bot as RandomBot
 from quartopy.bot.minimax_bot import MinimaxBot
+from quartopy.bot.CNN_bot import CNNBot
 from quartopy.models.Bot import BotAI
 from quartopy.game.quarto_game import QuartoGame
 
@@ -498,6 +499,8 @@ class GameBoard(QWidget):
                 return HumanBot(name=p_name)
             elif p_type == 'minimax_bot':
                 return MinimaxBot(name=p_name)
+            elif p_type == 'cnn_bot':
+                return CNNBot(name=p_name)
             else:  # 'random_bot'
                 return RandomBot(name=p_name)
 

@@ -77,7 +77,7 @@ class TypePlayerScreen(QWidget):
         
         self.player1_combo = QComboBox()
         self.player1_combo.setFont(QFont("Arial", 11))
-        self.player1_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax"])
+        self.player1_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax", "Bot CNN"])
         self.player1_combo.setStyleSheet("""
             QComboBox {
                 background-color: #2a2a2a;
@@ -119,7 +119,7 @@ class TypePlayerScreen(QWidget):
         
         self.player2_combo = QComboBox()
         self.player2_combo.setFont(QFont("Arial", 11))
-        self.player2_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax"])
+        self.player2_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax", "Bot CNN"])
         self.player2_combo.setStyleSheet(self.player1_combo.styleSheet())
         
         # Nota para Jugador 2
@@ -234,6 +234,8 @@ class TypePlayerScreen(QWidget):
                 return style.replace("border: 1px solid #555;", "border: 2px solid #4CAF50;")
             elif p_type == "Bot Minimax":
                 return style.replace("border: 1px solid #555;", "border: 2px solid #F44336;") # Red for Minimax
+            elif p_type == "Bot CNN":
+                return style.replace("border: 1px solid #555;", "border: 2px solid #FF9800;")
             else: # Random Bot
                 return style.replace("border: 1px solid #555;", "border: 2px solid #2196F3;")
 
@@ -248,6 +250,8 @@ class TypePlayerScreen(QWidget):
                 return 'human'
             elif combo_text == "Bot Minimax":
                 return 'minimax_bot'
+            elif combo_text == "Bot CNN":
+                return 'cnn_bot'
             else: # "Bot Aleatorio"
                 return 'random_bot'
 
