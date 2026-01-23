@@ -492,6 +492,8 @@ class GameBoard(QWidget):
 
         # --- Display de turno y Nametags (QGraphicsItems within scene) ---
         self.create_turn_display() # This creates QGraphicsItems in self.scene
+        self.create_player_info_display() # Added: Display player info
+
 
         # --- Common game logic setup ---
         def create_player(p_type, p_name):
@@ -716,6 +718,37 @@ class GameBoard(QWidget):
         self.player2_tag.setFont(font_player)
         self.player2_tag.setPos(250, 50) 
         self.scene.addItem(self.player2_tag)
+
+    def create_player_info_display(self):
+        """Crea un display estático con la información de los jugadores."""
+        player_type_map = {
+            'human': 'Humano',
+            'random_bot': 'Bot Aleatorio',
+            'minimax_bot': 'Bot Minimax',
+            'cnn_bot': 'Bot CNN'
+        }
+        p1_display = player_type_map.get(self.player1_type, self.player1_type.capitalize())
+        p2_display = player_type_map.get(self.player2_type, self.player2_type.capitalize())
+
+        info_text = f"Jugador 1: {p1_display}\nJugador 2: {p2_display}"
+
+        player_info_label = QLabel(info_text)
+        style = """
+            QLabel {
+                background-color: rgba(0, 0, 0, 180);
+                color: white;
+                border: 2px solid #FFD700;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 10pt;
+            }
+        """
+        player_info_label.setStyleSheet(style)
+
+        proxy_info = QGraphicsProxyWidget()
+        proxy_info.setWidget(player_info_label)
+        proxy_info.setPos(10, 10)
+        self.scene.addItem(proxy_info)
 
     def update_turn_display(self):
         """Actualiza el display del turno y de la acción según el estado actual."""
@@ -1210,16 +1243,38 @@ class GameBoard(QWidget):
             # que está en el storage_board y no en el game_board.
             self.end_game() # Considerar terminar o manejar el error de otra forma
 
-# ================================================================
+    def create_player_info_display(self):
+        """Crea un display estático con la información de los jugadores."""
+        player_type_map = {
+            'human': 'Humano',
+            'random_bot': 'Bot Aleatorio',
+            'minimax_bot': 'Bot Minimax',
+            'cnn_bot': 'Bot CNN'
+        }
+        p1_display = player_type_map.get(self.player1_type, self.player1_type.capitalize())
+        p2_display = player_type_map.get(self.player2_type, self.player2_type.capitalize())
 
-if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
-    app = QApplication(sys.argv)
-    window = GameBoard()
-    window.setWindowTitle("Quarto - Juego Completo")
-    window.resize(1000, 700)
-    window.show()
-    sys.exit(app.exec_())
+        info_text = f"Jugador 1: {p1_display}\nJugador 2: {p2_display}"
+
+        player_info_label = QLabel(info_text)
+        style = """
+            QLabel {
+                background-color: rgba(0, 0, 0, 180);
+                color: white;
+                border: 2px solid #FFD700;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 10pt;
+            }
+        """
+        player_info_label.setStyleSheet(style)
+
+        proxy_info = QGraphicsProxyWidget()
+        proxy_info.setWidget(player_info_label)
+        proxy_info.setPos(10, 10)
+        self.scene.addItem(proxy_info)
+
+
 
 
 

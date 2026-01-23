@@ -4,8 +4,8 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox,
     QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox, QInputDialog, QLineEdit
 )
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtCore import Qt, pyqtSignal, QSize
 import sys, os
 
 
@@ -69,11 +69,34 @@ class TypePlayerScreen(QWidget):
         # Jugador 1
         self.player1_name_edit = QLineEdit(self.player1_name)
         self.player1_name_edit.setFont(QFont("Arial", 12))
-        self.player1_name_edit.setStyleSheet("QLineEdit { background-color: transparent; border: none; color: white; }")
+        self.player1_name_edit.setStyleSheet("""
+    QLineEdit { 
+        background-color: rgba(255, 255, 255, 0.1); 
+        border: 1px solid rgba(255, 255, 255, 0.5); 
+        color: white; 
+        padding: 4px; 
+        border-radius: 3px;
+    }
+    QLineEdit:focus {
+        border: 1px solid white; /* Se ilumina al editar */
+    }
+""")
+        self.player1_name_edit.setFixedWidth(120)
         self.player1_name_edit.setReadOnly(True)
         self.player1_name_edit.mousePressEvent = lambda event: self.player1_name_edit.setReadOnly(False) if event.button() == Qt.LeftButton else QLineEdit.mousePressEvent(self.player1_name_edit, event)
         self.player1_name_edit.returnPressed.connect(lambda: self.player1_name_edit.setReadOnly(True))
         self.player1_name_edit.editingFinished.connect(lambda: self.player1_name_edit.setReadOnly(True))
+
+        player1_layout = QHBoxLayout()
+        player1_layout.addWidget(self.player1_name_edit)
+        self.player1_clear_btn = QPushButton()
+        self.player1_clear_btn.setIcon(QIcon("quartopy/gui/assets/images/Edit_button.png")) 
+        self.player1_clear_btn.setIconSize(QSize(24, 24))
+        self.player1_clear_btn.setFixedSize(30, 30)
+        self.player1_clear_btn.setStyleSheet("background-color: transparent; border: none;")
+        self.player1_clear_btn.clicked.connect(lambda: self.player1_name_edit.clear())
+        player1_layout.addWidget(self.player1_clear_btn)
+
         
         self.player1_combo = QComboBox()
         self.player1_combo.setFont(QFont("Arial", 11))
@@ -111,11 +134,33 @@ class TypePlayerScreen(QWidget):
         # Jugador 2
         self.player2_name_edit = QLineEdit(self.player2_name)
         self.player2_name_edit.setFont(QFont("Arial", 12))
-        self.player2_name_edit.setStyleSheet("QLineEdit { background-color: transparent; border: none; color: white; }")
+        self.player2_name_edit.setStyleSheet("""
+    QLineEdit { 
+        background-color: rgba(255, 255, 255, 0.1); 
+        border: 1px solid rgba(255, 255, 255, 0.5); 
+        color: white; 
+        padding: 4px; 
+        border-radius: 3px;
+    }
+    QLineEdit:focus {
+        border: 1px solid white; /* Se ilumina al editar */
+    }
+""")
+        self.player2_name_edit.setFixedWidth(120)
         self.player2_name_edit.setReadOnly(True)
         self.player2_name_edit.mousePressEvent = lambda event: self.player2_name_edit.setReadOnly(False) if event.button() == Qt.LeftButton else QLineEdit.mousePressEvent(self.player2_name_edit, event)
         self.player2_name_edit.returnPressed.connect(lambda: self.player2_name_edit.setReadOnly(True))
         self.player2_name_edit.editingFinished.connect(lambda: self.player2_name_edit.setReadOnly(True))
+
+        player2_layout = QHBoxLayout()
+        player2_layout.addWidget(self.player2_name_edit)
+        self.player2_clear_btn = QPushButton()
+        self.player2_clear_btn.setIcon(QIcon("quartopy/gui/assets/images/Edit_button.png"))
+        self.player2_clear_btn.setIconSize(QSize(24, 24))
+        self.player2_clear_btn.setFixedSize(30, 30)
+        self.player2_clear_btn.setStyleSheet("background-color: transparent; border: none;")
+        self.player2_clear_btn.clicked.connect(lambda: self.player2_name_edit.clear())
+        player2_layout.addWidget(self.player2_clear_btn)
         
         self.player2_combo = QComboBox()
         self.player2_combo.setFont(QFont("Arial", 11))
@@ -126,10 +171,10 @@ class TypePlayerScreen(QWidget):
         self.player2_note = QLabel("")
         
         # Añadir widgets al layout
-        config_layout.addWidget(self.player1_name_edit, 0, 0)
+        config_layout.addLayout(player1_layout, 0, 0)
         config_layout.addWidget(self.player1_combo, 0, 1)
 
-        config_layout.addWidget(self.player2_name_edit, 1, 0)
+        config_layout.addLayout(player2_layout, 1, 0)
         config_layout.addWidget(self.player2_combo, 1, 1)
         
         config_group.setLayout(config_layout)
