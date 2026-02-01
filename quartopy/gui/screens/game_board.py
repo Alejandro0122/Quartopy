@@ -400,15 +400,15 @@ class GameBoard(QWidget):
     def __init__(
         self, 
         parent=None, 
-        player1_type: str = 'human', 
-        player2_type: str = 'random_bot',
+        player1_config: dict = None, 
+        player2_config: dict = None,
         player1_name: str = "Jugador 1",
         player2_name: str = "Jugador 2", 
         mode_2x2: bool = False
     ):
         super().__init__(parent)
-        self.player1_type = player1_type
-        self.player2_type = player2_type
+        self.player1_config = player1_config if player1_config is not None else {'type': 'human', 'display_name': 'Humano'}
+        self.player2_config = player2_config if player2_config is not None else {'type': 'random_bot', 'display_name': 'Bot Aleatorio'}
         self.player1_name = player1_name
         self.player2_name = player2_name
         self.match_number = 1
@@ -496,9 +496,17 @@ class GameBoard(QWidget):
 
 
         # --- Common game logic setup ---
-        def create_player(p_type, p_name):
+        def create_player(p_config, p_name):
+            p_type = p_config['type']
             if p_type == 'human':
                 return HumanBot(name=p_name)
+            elif p_type == 'custom_bot':
+                bot_class = p_config['bot_class']
+                model_path = p_config.get('model_path') # Use .get() in case model_path is None
+                if model_path:
+                    return bot_class(name=p_name, model_path=model_path)
+                else:
+                    return bot_class(name=p_name)
             elif p_type == 'minimax_bot':
                 return MinimaxBot(name=p_name)
             elif p_type == 'cnn_bot':
@@ -506,8 +514,8 @@ class GameBoard(QWidget):
             else:  # 'random_bot'
                 return RandomBot(name=p_name)
 
-        self.player1_instance = create_player(self.player1_type, self.player1_name)
-        self.player2_instance = create_player(self.player2_type, self.player2_name)
+        self.player1_instance = create_player(self.player1_config, self.player1_name)
+        self.player2_instance = create_player(self.player2_config, self.player2_name)
             
         self.quarto_game = QuartoGame(
             player1=self.player1_instance, 
@@ -524,7 +532,7 @@ class GameBoard(QWidget):
         self.click_to_select_enabled = True # Controla la nueva funcionalidad
 
         # Determinar el estado inicial del juego basado en el tipo de jugador 1
-        if self.player1_type == 'human':
+        if self.player1_config['type'] == 'human':
             self.human_action_phase = "PICK_TO_C4"
             self.current_turn = "HUMAN"
         else: # player1_type is a bot
@@ -631,9 +639,9 @@ class GameBoard(QWidget):
     def _get_current_player_type(self) -> str:
         """Retorna el tipo del jugador actual ('human', 'random_bot', or 'minimax_bot')."""
         if self.quarto_game.turn: # Player 1
-            return self.player1_type
+            return self.player1_config['type']
         else: # Player 2
-            return self.player2_type
+            return self.player2_config['type']
 
     def handle_piece_selection(self, piece_item):
         """
@@ -721,14 +729,8 @@ class GameBoard(QWidget):
 
     def create_player_info_display(self):
         """Crea un display estático con la información de los jugadores."""
-        player_type_map = {
-            'human': 'Humano',
-            'random_bot': 'Bot Aleatorio',
-            'minimax_bot': 'Bot Minimax',
-            'cnn_bot': 'Bot CNN'
-        }
-        p1_display = player_type_map.get(self.player1_type, self.player1_type.capitalize())
-        p2_display = player_type_map.get(self.player2_type, self.player2_type.capitalize())
+        p1_display = self.player1_config['display_name']
+        p2_display = self.player2_config['display_name']
 
         info_text = f"Jugador 1: {p1_display}\nJugador 2: {p2_display}"
 
@@ -1245,14 +1247,8 @@ class GameBoard(QWidget):
 
     def create_player_info_display(self):
         """Crea un display estático con la información de los jugadores."""
-        player_type_map = {
-            'human': 'Humano',
-            'random_bot': 'Bot Aleatorio',
-            'minimax_bot': 'Bot Minimax',
-            'cnn_bot': 'Bot CNN'
-        }
-        p1_display = player_type_map.get(self.player1_type, self.player1_type.capitalize())
-        p2_display = player_type_map.get(self.player2_type, self.player2_type.capitalize())
+        p1_display = self.player1_config['display_name']
+        p2_display = self.player2_config['display_name']
 
         info_text = f"Jugador 1: {p1_display}\nJugador 2: {p2_display}"
 

@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt, pyqtSignal, QSize
 import sys, os
+from .add_bot_screen import AddBotScreen
 
 
 class TypePlayerScreen(QWidget):
@@ -21,6 +22,7 @@ class TypePlayerScreen(QWidget):
         super().__init__(parent)
         self.player1_name = "Jugador 1"
         self.player2_name = "Jugador 2"
+        self._loaded_bots = {} # To store dynamically loaded bot configurations
         self.setup_ui()
         self.setStyleSheet("background-color: #1a1a1a; color: white;")
         self.setWindowFlags(Qt.FramelessWindowHint)
@@ -94,7 +96,7 @@ class TypePlayerScreen(QWidget):
         self.player1_clear_btn.setIconSize(QSize(24, 24))
         self.player1_clear_btn.setFixedSize(30, 30)
         self.player1_clear_btn.setStyleSheet("background-color: transparent; border: none;")
-        self.player1_clear_btn.clicked.connect(lambda: self.player1_name_edit.clear())
+        self.player1_clear_btn.clicked.connect(lambda: (self.player1_name_edit.setReadOnly(False), self.player1_name_edit.clear(), self.player1_name_edit.setFocus()))
         player1_layout.addWidget(self.player1_clear_btn)
 
         
@@ -159,7 +161,7 @@ class TypePlayerScreen(QWidget):
         self.player2_clear_btn.setIconSize(QSize(24, 24))
         self.player2_clear_btn.setFixedSize(30, 30)
         self.player2_clear_btn.setStyleSheet("background-color: transparent; border: none;")
-        self.player2_clear_btn.clicked.connect(lambda: self.player2_name_edit.clear())
+        self.player2_clear_btn.clicked.connect(lambda: (self.player2_name_edit.setReadOnly(False), self.player2_name_edit.clear(), self.player2_name_edit.setFocus()))
         player2_layout.addWidget(self.player2_clear_btn)
         
         self.player2_combo = QComboBox()
@@ -249,7 +251,29 @@ class TypePlayerScreen(QWidget):
         """)
         self.start_btn.clicked.connect(self.start_game)
         
+        # Botón para agregar bot
+        self.add_bot_btn = QPushButton("Agregar Bot")
+        self.add_bot_btn.setFont(QFont("Arial", 12, QFont.Bold))
+        self.add_bot_btn.setFixedSize(150, 50)
+        self.add_bot_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: 2px solid #0056b3;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+                border: 2px solid #003F7F;
+            }
+            QPushButton:pressed {
+                background-color: #004085;
+            }
+        """)
+        self.add_bot_btn.clicked.connect(self._open_add_bot_screen)
+
         buttons_layout.addStretch()
+        buttons_layout.addWidget(self.add_bot_btn) # Add new button here
         buttons_layout.addWidget(self.back_btn)
         buttons_layout.addWidget(self.start_btn)
         buttons_layout.addStretch()
@@ -290,19 +314,30 @@ class TypePlayerScreen(QWidget):
     def get_player_config(self):
         """Obtiene la configuración de jugadores seleccionada"""
         
-        def get_player_type(combo_text):
+        def _get_player_details(combo_text):
             if combo_text == "Humano":
-                return 'human'
+                return {'type': 'human', 'display_name': 'Humano'}
+            elif combo_text in self._loaded_bots:
+                bot_info = self._loaded_bots[combo_text]
+                return {
+                    'type': 'custom_bot',
+                    'display_name': bot_info['bot_name'],
+                    'bot_class': bot_info['bot_class'],
+                    'model_path': bot_info['model_path']
+                }
             elif combo_text == "Bot Minimax":
-                return 'minimax_bot'
+                return {'type': 'minimax_bot', 'display_name': 'Bot Minimax'}
             elif combo_text == "Bot CNN":
-                return 'cnn_bot'
+                return {'type': 'cnn_bot', 'display_name': 'Bot CNN'}
             else: # "Bot Aleatorio"
-                return 'random_bot'
+                return {'type': 'random_bot', 'display_name': 'Bot Aleatorio'}
+
+        player1_details = _get_player_details(self.player1_combo.currentText())
+        player2_details = _get_player_details(self.player2_combo.currentText())
 
         config = {
-            'player1': get_player_type(self.player1_combo.currentText()),
-            'player2': get_player_type(self.player2_combo.currentText()),
+            'player1_config': player1_details,
+            'player2_config': player2_details,
             'player1_name': self.player1_name_edit.text(),
             'player2_name': self.player2_name_edit.text()
         }
@@ -321,9 +356,29 @@ class TypePlayerScreen(QWidget):
         # Emitir la señal de volver al menú (sin argumentos)
         self.back_to_menu.emit()
     
+    def _open_add_bot_screen(self):
+        """Abre la mini pantalla para agregar un nuevo bot"""
+        add_bot_dialog = AddBotScreen(self)
+        add_bot_dialog.bot_added_successfully.connect(self._add_loaded_bot_to_combos)
+        add_bot_dialog.exec_()
+    
+    def _add_loaded_bot_to_combos(self, bot_config: dict):
+        """Añade un bot cargado dinámicamente a los QComboBoxes de selección."""
+        bot_name = bot_config['bot_name']
+        self._loaded_bots[bot_name] = bot_config
+        self.player1_combo.addItem(bot_name)
+        self.player2_combo.addItem(bot_name)
+
     def showEvent(self, event):
         """Se ejecuta cuando se muestra la pantalla"""
         super().showEvent(event)
+        # Limpiar bots cargados y resetear QComboBoxes
+        self._loaded_bots = {}
+        self.player1_combo.clear()
+        self.player2_combo.clear()
+        self.player1_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax", "Bot CNN"])
+        self.player2_combo.addItems(["Humano", "Bot Aleatorio", "Bot Minimax", "Bot CNN"])
+
         # Restablecer selecciones por defecto
         self.player1_combo.setCurrentIndex(0)  # Humano
         self.player2_combo.setCurrentIndex(1)  # Bot Aleatorio

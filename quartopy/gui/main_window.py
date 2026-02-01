@@ -83,8 +83,8 @@ class MainWindow(QMainWindow):
         Crea una nueva instancia de GameBoard con la configuración de jugadores
         y modo 2x2 seleccionada, y la muestra.
         """
-        player1_type = config['player1']
-        player2_type = config['player2']
+        player1_config_dict = config['player1_config']
+        player2_config_dict = config['player2_config']
         player1_name = config['player1_name']
         player2_name = config['player2_name']
         mode_2x2 = config['mode_2x2']
@@ -99,8 +99,8 @@ class MainWindow(QMainWindow):
         # Crear nueva instancia de GameBoard con la configuración
         self.game_board = GameBoard(
             parent=self, 
-            player1_type=player1_type, 
-            player2_type=player2_type,
+            player1_config=player1_config_dict, 
+            player2_config=player2_config_dict,
             player1_name=player1_name,
             player2_name=player2_name,
             mode_2x2=mode_2x2
