@@ -6,9 +6,11 @@ from PyQt5.QtWidgets import (
     QDialog, QCheckBox
 )
 from PyQt5.QtGui import QPen, QColor, QPixmap, QPainter, QFont
-from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer, pyqtSignal
+from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer, pyqtSignal, QUrl
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent # Importacion para el sonido
 import sys 
 import math
+import os
 
 from quartopy.game.board import Board
 from quartopy.game.piece import Piece, Size, Coloration, Shape, Hole
@@ -303,7 +305,7 @@ class PauseDialog(QDialog):
     def __init__(self, parent_board):
         super().__init__(parent_board)
         self.parent_board = parent_board
-        self.resize(400, 200)
+        self.resize(400, 250) # Increased height
         self.setModal(True)
         self.setWindowFlags(Qt.FramelessWindowHint)
         #BORDE VENTANA COLOR GRIS
@@ -312,17 +314,17 @@ class PauseDialog(QDialog):
         
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(20)
-        self.layout.setContentsMargins(50, 50, 50, 50)
+        self.layout.setContentsMargins(20, 20, 20, 20) # Reduced margins
 
         # Título
         title_label = QLabel("PAUSA")
         title_label.setFont(QFont("Arial", 24, QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("color: #FFD700; padding: 50px;")
+        title_label.setStyleSheet("color: #FFD700; padding: 10px;") # Added padding
         self.layout.addWidget(title_label)
 
-        # Checkbox
-        self.checkbox = QCheckBox("Habilitar confirmacion")
+        # Checkbox para confirmación de selección
+        self.checkbox = QCheckBox("Habilitar confirmacion de seleccion")
         self.checkbox.setStyleSheet("color: white;")
         self.checkbox.setChecked(self.parent_board.click_to_select_enabled)
         self.layout.addWidget(self.checkbox)
@@ -331,7 +333,28 @@ class PauseDialog(QDialog):
         color: white;
     }
     QCheckBox::indicator {
+        background: #1a1a1a;
+        width: 18px;
+        height: 18px;
+        border-radius: 1px;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #FFC400;
         border: 2px solid #FFC400;
+        color: black;
+    }
+""")
+        
+        # Nuevo Checkbox para habilitar/deshabilitar sonido
+        self.sound_checkbox = QCheckBox("Habilitar sonido")
+        self.sound_checkbox.setStyleSheet("color: white;")
+        self.sound_checkbox.setChecked(self.parent_board.sound_enabled) # Initialize with current state
+        self.layout.addWidget(self.sound_checkbox)
+        self.sound_checkbox.setStyleSheet("""
+    QCheckBox {
+        color: white;
+    }
+    QCheckBox::indicator {
         background: #1a1a1a;
         width: 18px;
         height: 18px;
@@ -413,6 +436,17 @@ class GameBoard(QWidget):
         self.player2_name = player2_name
         self.match_number = 1
 
+        # Inicializar reproductor de sonido
+        self.place_piece_sound = QMediaPlayer()
+        self.sound_enabled = True # Controla si el sonido está habilitado
+        sound_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "sounds", "piece_move.mp3"))
+        self.place_piece_sound.setMedia(QMediaContent(QUrl.fromLocalFile(sound_file_path)))
+        self.place_piece_sound.error.connect(self.handle_media_player_error)
+
+        print(f"Debug: Sound file path: {sound_file_path}")
+        print(f"Debug: Sound file exists: {os.path.exists(sound_file_path)}")
+        print(f"Debug: QMediaPlayer state: {self.place_piece_sound.state()}")
+
         # --- Main Vertical Layout ---
         main_v_layout = QVBoxLayout(self)
         self.setLayout(main_v_layout)
@@ -467,6 +501,16 @@ class GameBoard(QWidget):
         proxy_options.setWidget(self.btn_options)
         proxy_options.setPos(50, 520) # Posición centrada donde estaban los otros botones
         self.scene.addItem(proxy_options)
+
+        self.btn_restart = QPushButton('Jugar de nuevo')
+        self.btn_restart.setStyleSheet(button_style)
+        self.btn_restart.setFixedSize(180, 50)
+        self.btn_restart.clicked.connect(self.confirm_restart_game)
+
+        proxy_restart = QGraphicsProxyWidget()
+        proxy_restart.setWidget(self.btn_restart)
+        proxy_restart.setPos(560, 520) # Posición al lado de los otros botones
+        self.scene.addItem(proxy_restart)
 
         # --- Tablero (QGraphicsItems within scene) ---
         self.cells = []
@@ -554,10 +598,13 @@ class GameBoard(QWidget):
         if self.current_turn == "BOT":
             QTimer.singleShot(500, self.handle_bot_turn)
 
+
+
     def show_pause_menu(self):
         dialog = PauseDialog(self)
         dialog.exec_()
         self.click_to_select_enabled = dialog.checkbox.isChecked()
+        self.sound_enabled = dialog.sound_checkbox.isChecked()
 
     def highlight_winning_line(self, winning_coords):
         """Pinta las celdas de la línea ganadora."""
@@ -855,6 +902,8 @@ class GameBoard(QWidget):
 
     def _handle_successful_placement(self, piece_item, row, col):
         """Lógica centralizada que se ejecuta después de colocar una pieza con éxito."""
+        if self.sound_enabled: # Reproducir sonido solo si está habilitado
+            self.place_piece_sound.play() 
         game = self.quarto_game
         piece_item.is_on_board = True
         piece_item.is_in_container_3_or_4 = False
@@ -1052,12 +1101,79 @@ class GameBoard(QWidget):
         
         # Reiniciar fases
         self.game_over = False
-        self.human_action_phase = "PICK_TO_C4"
+        self.human_action_phase = "IDLE" # Por defecto, en espera
         self.selected_piece_for_c3 = None
-        self.current_turn = "HUMAN"
+        self.current_turn = "IDLE"  # IDLE, HUMAN, BOT, GAME_OVER
+
+        # Determinar el estado inicial del juego basado en el tipo de jugador 1
+        if self.player1_config['type'] == 'human':
+            self.human_action_phase = "PICK_TO_C4"
+            self.current_turn = "HUMAN"
+        else: # player1_type is a bot
+            self.current_turn = "BOT"
+        
+        self.update_turn_display()
+        
+        # Si el jugador 1 es un bot, iniciar su turno automáticamente
+        if self.current_turn == "BOT":
+            QTimer.singleShot(500, self.handle_bot_turn)
+
+    def confirm_restart_game(self):
+        msg = QMessageBox()
+        msg.setWindowFlags(Qt.FramelessWindowHint)
+        msg.setText("¿Estás seguro de que quieres reiniciar la partida?")
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.No)
+        msg.setStyleSheet("""
+    QMessageBox {
+        background-color: #1a1a1a;
+        color: white;
+        min-width: 300px;
+        border: 1px solid white;
+    }
+    
+    QMessageBox QLabel {
+        color: white;
+        font-size: 14px;
+    }
+                            
+QDialogButtonBox {
+        qproperty-centerButtons: true;
+    }
+                            
+    QMessageBox QPushButton {
+        background-color: #FFC400;
+        color: black;
+        font-weight: bold;
+        border-radius: 5px;
+        padding: 8px 16px;
+        border: 2px solid #FFC400; 
+    }
+    
+    QMessageBox QPushButton:hover {
+        background-color: #FFD700;
+        border: 2px solid #FFD700;
+    }
+    
+    QMessageBox QPushButton:pressed {
+        background-color: #E6B800;
+        border: 2px solid #E6B800;
+    }
+    
+    QMessageBox QPushButton:focus {
+        outline: none;  
+        border: 2px solid white;  
+    }
+""")
+        ret = msg.exec_()
+        if ret == QMessageBox.Yes:
+            self.restart_game()
+
+    def restart_game(self):
+        self.reset_board()
+        self.match_number = 1
         self.update_turn_display()
 
-    # ================================================================
     def handle_bot_turn(self):
         """Maneja el turno completo del bot"""
         if self.game_over:
@@ -1269,6 +1385,10 @@ class GameBoard(QWidget):
         proxy_info.setWidget(player_info_label)
         proxy_info.setPos(10, 10)
         self.scene.addItem(proxy_info)
+
+    def handle_media_player_error(self, error):
+        print(f"Error en QMediaPlayer: {error} - {self.place_piece_sound.errorString()}")
+
 
 
 

@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QApplication
-from PyQt5.QtGui import QFont, QGuiApplication
+from PyQt5.QtGui import QFont, QGuiApplication, QIcon
 from PyQt5.QtCore import Qt, pyqtSignal
 import importlib.util
 import importlib.machinery
@@ -11,6 +11,7 @@ class AddBotScreen(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowIcon(QIcon('quartopy/gui/assets/images/robot_icon.png'))
         #self.setWindowFlags(Qt.FramelessWindowHint) # Ocultar la barra de título
         self.setWindowTitle("Agregar Nuevo Bot")
         self.setFixedSize(500, 300) # Adjusted size for new elements
@@ -50,6 +51,7 @@ class AddBotScreen(QDialog):
         # Title
         title_label = QLabel("Configuración de Nuevo Bot")
         title_label.setFont(QFont("Arial", 16, QFont.Bold))
+        #self.setWindowFlags(Qt.FramelessWindowHint)
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("color: #FFD700;")
         main_layout.addWidget(title_label)
