@@ -5,8 +5,8 @@ import importlib.util
 import importlib.machinery
 from quartopy import BotAI
 import os
-import sys # Added this import
-import shutil # Added this import
+import sys
+import shutil
 
 class AddBotScreen(QDialog):
     bot_added_successfully = pyqtSignal(dict) # New signal
@@ -22,6 +22,7 @@ class AddBotScreen(QDialog):
         self.bot_file_path = None # Initialize
         self.model_file_path = None # Initialize
         self.weights_file_path = None # Initialize weights file path
+        self.original_model_file_path = None # Guardar la ruta original del modelo
         
         self.setup_ui() # Call setup_ui first to finalize layout
 
@@ -44,7 +45,6 @@ class AddBotScreen(QDialog):
         x = (screen_geometry.width() - self.width()) / 2
         y = (screen_geometry.height() - self.height()) / 2
         self.move(int(x), int(y))
-
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -233,11 +233,8 @@ class AddBotScreen(QDialog):
         
         model_class = None
         bot_class = None
-        temp_sys_path_added = False # Flag to track if we added quartopy_root to sys.path
         
         try:
-            temp_sys_path_added = True
-
             # Import CNNBot directly from its known package path
             from quartopy.bot.CNN_bot import CNNBot as bot_class_imported
             bot_class = bot_class_imported
@@ -245,102 +242,125 @@ class AddBotScreen(QDialog):
             if bot_class is None: # Should not happen if import is successful
                 raise ValueError("No se encontró la clase CNNBot en quartopy.bot.CNN_bot.")
 
-            # Determine the absolute module name for the model file
-            # e.g., quartopy/models/CNN_uncoupled.py -> quartopy.models.CNN_uncoupled
-            relative_model_path = os.path.relpath(model_file_path, quartopy_root)
-            if not relative_model_path.startswith('quartopy'):
-                raise ImportError(f"El archivo del modelo {model_file_path} no parece estar dentro del paquete 'quartopy'.")
+            # Cargar el módulo del modelo dinámicamente
+            model_module_name = f"custom_model_{hash(model_file_path)}"
             
-            model_module_name = relative_model_path.replace(os.sep, '.')[:-3] # Remove .py
+            # Crear especificación desde el archivo
+            spec = importlib.util.spec_from_file_location(model_module_name, model_file_path)
+            if spec is None:
+                raise ImportError(f"No se pudo crear especificación para el módulo desde {model_file_path}")
             
-            # Use importlib.import_module for the model
-            module_model = importlib.import_module(model_module_name)
-
-            candidate_classes = [obj for name, obj in vars(module_model).items() 
-                                 if isinstance(obj, type) and obj.__module__ == module_model.__name__]
+            # Crear módulo
+            module_model = importlib.util.module_from_spec(spec)
+            
+            # Configurar __package__ para permitir importaciones
+            # Primero verificar si el archivo está dentro de quartopy
+            if 'quartopy' in model_file_path and 'models' in model_file_path:
+                module_model.__package__ = 'quartopy.models'
+            else:
+                # Si no está en quartopy, configurar un paquete ficticio
+                module_model.__package__ = 'custom_models'
+            
+            # Ejecutar el módulo
+            sys.modules[model_module_name] = module_model
+            spec.loader.exec_module(module_model)
+            
+            # Buscar la clase del modelo en el módulo
+            candidate_classes = []
+            for name, obj in vars(module_model).items():
+                if isinstance(obj, type):
+                    # Verificar si es una clase de modelo (no clase built-in, no ABC, etc.)
+                    if hasattr(obj, '__module__') and obj.__module__ == module_model.__name__:
+                        candidate_classes.append(obj)
             
             if not candidate_classes:
                 raise ValueError(f"No se encontró ninguna clase de modelo en el archivo: {model_file_path}")
             
+            # Seleccionar la clase del modelo
             if len(candidate_classes) == 1:
                 model_class = candidate_classes[0]
             else:
+                # Intentar encontrar la clase más probable
                 for cls in candidate_classes:
-                    if "CNN" in cls.__name__ or "Model" in cls.__name__:
+                    cls_name = cls.__name__.lower()
+                    if 'cnn' in cls_name or 'model' in cls_name or 'net' in cls_name:
                         model_class = cls
                         break
                 if model_class is None:
-                    raise ValueError(f"Múltiples clases encontradas en {model_file_path}. No se pudo identificar la clase del modelo.")
+                    # Usar la primera clase que no sea una excepción, ABC, etc.
+                    for cls in candidate_classes:
+                        if not cls.__name__.endswith('Error') and not cls.__name__.endswith('Exception'):
+                            model_class = cls
+                            break
+                    if model_class is None:
+                        model_class = candidate_classes[0]
 
-            bot_name = f"CNN_Bot_with_{os.path.basename(model_file_path).replace('.py', '')}_weights_{os.path.basename(weights_file_path).replace('.pt', '')}"
+            # Crear nombre para el bot
+            model_name = os.path.basename(model_file_path).replace('.py', '')
+            weights_name = os.path.basename(weights_file_path).replace('.pt', '')
+            bot_name = f"CNN_Bot_{model_name}_{weights_name}"
+            
+            # Intentar crear una instancia temporal para verificar
             temp_bot_instance = bot_class(name=bot_name, model_class=model_class, model_path=weights_file_path)
             
             bot_config = {
                 'bot_name': bot_name,
                 'bot_class': bot_class,
                 'model_class': model_class,
-                'model_path': model_file_path,
-                'weights_path': weights_file_path
+                'model_path': model_file_path,  # Usar la ruta original
+                'weights_path': weights_file_path,
+                'model_module': module_model  # Guardar el módulo también
             }
             
-            return True, f"Configuración de CNN Bot con modelo '{os.path.basename(model_file_path)}' y pesos '{os.path.basename(weights_file_path)}' parece ser válida.", bot_config
+            return True, f"Configuración de CNN Bot con modelo '{model_name}' y pesos '{weights_name}' parece ser válida.", bot_config
 
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"Error detallado: {error_details}")  # Para depuración
             return False, f"Error al validar el modelo, pesos o el bot: {e}", None
-        finally:
-            # Remove the added path from sys.path
-            if temp_sys_path_added and quartopy_root in sys.path:
-                sys.path.remove(quartopy_root)
 
     def _open_model_file_dialog(self):
+        """Abre el diálogo para seleccionar archivo de modelo"""
         self.save_btn.setEnabled(False) # Disable save button on file change
         initial_dir = os.path.join(os.getcwd(), 'quartopy', 'models')
         selected_file_path, _ = QFileDialog.getOpenFileName(self, "Seleccionar Archivo de Modelo para CNN Bot", initial_dir, "Python Files (*.py);;All Files (*)")
+        
         if selected_file_path:
+            # Guardar la ruta original
+            self.original_model_file_path = selected_file_path
+            
             quartopy_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
             destination_dir = os.path.join(quartopy_root, 'quartopy', 'models')
-            os.makedirs(destination_dir, exist_ok=True)
             
-            final_model_file_path = None
-            # Check if the file is already in the destination folder
+            # Verificar si el archivo NO está en la carpeta de quartopy/models
             if not os.path.abspath(selected_file_path).startswith(os.path.abspath(destination_dir)):
+                # Solo copiar si no está ya en quartopy
                 try:
                     dest_file_path = os.path.join(destination_dir, os.path.basename(selected_file_path))
-                    shutil.copy2(selected_file_path, dest_file_path)
-                    final_model_file_path = dest_file_path
-                    QMessageBox.information(self, "Archivo Copiado", f"El archivo '{os.path.basename(selected_file_path)}' ha sido copiado a '{os.path.relpath(destination_dir, quartopy_root)}'.")
+                    
+                    # Si ya existe, no copiar ni mostrar mensaje
+                    if not os.path.exists(dest_file_path):
+                        shutil.copy2(selected_file_path, dest_file_path)
+                        QMessageBox.information(self, "Archivo Preparado", 
+                            f"El modelo '{os.path.basename(selected_file_path)}' ha sido preparado para su uso.")
+                    
+                    self.model_file_path = dest_file_path
                 except Exception as e:
-                    QMessageBox.critical(self, "Error de Copia", f"No se pudo copiar el archivo: {e}")
+                    QMessageBox.critical(self, "Error al Procesar Archivo", 
+                        f"No se pudo procesar el archivo del modelo: {e}")
                     self.model_file_path = None
+                    self.model_path_label.setText("No se ha seleccionado archivo")
+                    return
             else:
-                final_model_file_path = selected_file_path
+                # El archivo ya está en quartopy/models, usarlo directamente
+                self.model_file_path = selected_file_path
             
-            self.model_file_path = final_model_file_path
-
-            # --- Lógica para modificar el archivo copiado ---
-            if self.model_file_path:
-                try:
-                    with open(self.model_file_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    
-                    old_import = "from models.NN_abstract import NN_abstract"
-                    new_import = "from quartopy.models.NN_abstract import NN_abstract"
-
-                    if old_import in content:
-                        modified_content = content.replace(old_import, new_import)
-                        with open(self.model_file_path, 'w', encoding='utf-8') as f:
-                            f.write(modified_content)
-                        QMessageBox.information(self, "Import Corregido", "La importación de 'NN_abstract' ha sido corregida en el archivo del modelo.")
-                    
-                except Exception as e:
-                    QMessageBox.critical(self, "Error al Modificar Archivo", f"No se pudo modificar la importación en el archivo del modelo: {e}")
-                    self.model_file_path = None # Invalidar selección si falla la modificación
-            # --- Fin de la lógica de modificación ---
-
             self.model_path_label.setText(os.path.basename(self.model_file_path) if self.model_file_path else "No se ha seleccionado archivo")
         else:
             self.model_file_path = None
             self.model_path_label.setText("No se ha seleccionado archivo")
+        
         self._update_verify_button_state()
 
     def _open_weights_file_dialog(self):
@@ -356,9 +376,14 @@ class AddBotScreen(QDialog):
             if not os.path.abspath(selected_file_path).startswith(os.path.abspath(destination_dir)):
                 try:
                     dest_file_path = os.path.join(destination_dir, os.path.basename(selected_file_path))
-                    shutil.copy2(selected_file_path, dest_file_path)
+                    
+                    # Si ya existe, no copiar ni mostrar mensaje
+                    if not os.path.exists(dest_file_path):
+                        shutil.copy2(selected_file_path, dest_file_path)
+                        QMessageBox.information(self, "Archivo Copiado", 
+                            f"El archivo '{os.path.basename(selected_file_path)}' ha sido copiado a '{os.path.relpath(destination_dir, quartopy_root)}'.")
+                    
                     self.weights_file_path = dest_file_path
-                    QMessageBox.information(self, "Archivo Copiado", f"El archivo '{os.path.basename(selected_file_path)}' ha sido copiado a '{os.path.relpath(destination_dir, quartopy_root)}'.")
                 except Exception as e:
                     QMessageBox.critical(self, "Error de Copia", f"No se pudo copiar el archivo: {e}")
                     self.weights_file_path = None
@@ -388,6 +413,10 @@ class AddBotScreen(QDialog):
         """Guarda la configuración del bot si es válida."""
         is_valid, message, bot_config = self._perform_bot_validation(self.model_file_path, self.weights_file_path)
         if is_valid:
+            # Asegurarnos de usar la ruta original si existe
+            if self.original_model_file_path and os.path.exists(self.original_model_file_path):
+                bot_config['model_path'] = self.original_model_file_path
+            
             self.bot_added_successfully.emit(bot_config)
             QMessageBox.information(self, "Éxito", f"Bot '{bot_config['bot_name']}' cargado exitosamente.")
             self.accept() # Close dialog on success
