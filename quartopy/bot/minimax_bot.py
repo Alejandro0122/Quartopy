@@ -1,6 +1,6 @@
 """
 Python 3
-10 / 0 / 2026
+10 / 01 / 2026
 @author: jairo
 
 "I know that I know nothing."

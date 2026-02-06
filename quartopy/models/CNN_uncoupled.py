@@ -12,6 +12,8 @@ Python 3
 "I find that I don't understand things unless I try to program them."
 -Donald E. Knuth
 """
+from quartopy.models.NN_abstract import NN_abstract
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,7 +22,7 @@ import numpy as np
 # ----------------------------- logging --------------------------
 
 
-class QuartoCNN(nn.Module):
+class QuartoCNN(NN_abstract):
     """
     QuartoCNN is a Convolutional Neural Network (CNN) model for the Quarto board game that predicts the action value function.
     It has a sequencial output architecture:
@@ -34,6 +36,11 @@ class QuartoCNN(nn.Module):
     * batch-16 [-1,1] tensor representing the action value of the board position
     * batch-by-16 [-1,1] tensor representing the action value of the piece
     """
+
+    @property
+    def name(self) -> str:
+        return "QuartoCNN_uncoupled"
+
     def __init__(self):
         super().__init__()
         # Input shape: (batch_size, 16, 4, 4)
@@ -91,31 +98,3 @@ class QuartoCNN(nn.Module):
         logits_piece = self.fc2_piece(x)
         qav_piece = F.tanh(logits_piece)
         return qav_board, qav_piece
-
-    @classmethod
-    def from_file(cls, model_path: str, device: torch.device) -> 'QuartoCNN':
-        model = cls()
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model.to(device)
-        model.eval()
-        return model
-
-    def predict(
-        self,
-        board_tensor: torch.Tensor,
-        piece_tensor: torch.Tensor,
-        TEMPERATURE: float,
-        DETERMINISTIC: bool,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        with torch.no_grad():
-            qav_board, qav_piece = self.forward(board_tensor, piece_tensor)
-
-        # Apply temperature for piece selection
-        if not DETERMINISTIC:
-            qav_piece = F.softmax(qav_piece / TEMPERATURE, dim=-1)
-
-        # Select the best 16 pieces and board positions
-        _, top_pieces_indices = torch.topk(qav_piece, 16, dim=-1)
-        _, top_board_pos_indices = torch.topk(qav_board, 16, dim=-1)
-
-        return top_board_pos_indices, top_pieces_indices

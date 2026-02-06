@@ -545,12 +545,14 @@ class GameBoard(QWidget):
             if p_type == 'human':
                 return HumanBot(name=p_name)
             elif p_type == 'custom_bot':
-                bot_class = p_config['bot_class']
-                model_path = p_config.get('model_path') # Use .get() in case model_path is None
-                if model_path:
-                    return bot_class(name=p_name, model_path=model_path)
-                else:
-                    return bot_class(name=p_name)
+                actual_bot_class = p_config['bot_class'] # This is CNNBot
+                model_class = p_config['model_class'] # This is QuartoCNN
+                weights_path = p_config.get('weights_path') # This is the .pt file
+
+                if weights_path:
+                    return actual_bot_class(name=p_name, model_class=model_class, model_path=weights_path)
+                else: # Fallback, though weights_path should always be there for custom_bot
+                    return actual_bot_class(name=p_name, model_class=model_class)
             elif p_type == 'minimax_bot':
                 return MinimaxBot(name=p_name)
             elif p_type == 'cnn_bot':

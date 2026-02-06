@@ -107,23 +107,27 @@ class NN_abstract(ABC, torch.nn.Module):
 
     # ####################################################################
     @classmethod
-    def from_file(cls, weights_path: str):
+    def from_file(cls, weights_path: str, device: torch.device | None = None):
         """
         Load the model from a file.
 
         Args:
             weights_path: Path to the saved model weights file (.pt file).
+            device: The device to load the model onto (e.g., 'cpu', 'cuda'). If None, uses model's default device.
 
         Returns:
             NN_abstract: Model instance with loaded weights.
         """
         model = cls()
-
-        # specifically load only weights, map to appropriate device
+        # If device is not provided, use model's default device (assuming it's initialized in __init__)
+        if device is None:
+            device = model.device 
+        
         model.load_state_dict(
-            torch.load(weights_path, weights_only=True, map_location=model.device)
+            torch.load(weights_path, weights_only=True, map_location=device)
         )
-        model.to(model.device)  # Ensure model is on the correct device
+        model.to(device)  # Ensure model is on the correct device
+        model.eval() # Set model to evaluation mode
 
         return model
 

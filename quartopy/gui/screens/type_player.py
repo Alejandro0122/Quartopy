@@ -322,8 +322,9 @@ class TypePlayerScreen(QWidget):
                 return {
                     'type': 'custom_bot',
                     'display_name': bot_info['bot_name'],
-                    'bot_class': bot_info['bot_class'],
-                    'model_path': bot_info['model_path']
+                    'bot_class': bot_info['bot_class'],        # CNNBot
+                    'model_class': bot_info['model_class'],    # QuartoCNN
+                    'weights_path': bot_info['weights_path']    # Ruta al .pt de los pesos
                 }
             elif combo_text == "Bot Minimax":
                 return {'type': 'minimax_bot', 'display_name': 'Bot Minimax'}
