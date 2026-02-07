@@ -2,12 +2,44 @@
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox,
-    QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox, QInputDialog, QLineEdit
+    QPushButton, QComboBox, QGroupBox, QGridLayout, QCheckBox, QInputDialog, QLineEdit, QApplication # Añadido QApplication
 )
-from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
+from PyQt5.QtGui import QFont, QIcon, QPainter, QColor, QBrush, QRadialGradient # Añadido QPainter, QColor, QBrush, QRadialGradient
+from PyQt5.QtCore import Qt, pyqtSignal, QSize, QTimer, QPointF # Añadido QTimer, QPointF
 import sys, os
+import random # Necesario para la clase Particle
 from .add_bot_screen import AddBotScreen
+
+# --- CLASE PARA PARTÍCULAS TIPO "ESTELA" ---
+class Particle:
+    def __init__(self, max_width, max_height):
+        self.max_w = max_width
+        self.max_h = max_height
+        
+        # Nacimiento: Esquina superior derecha
+        offset = random.uniform(-100, 100)
+        self.position = QPointF(max_width + 50, -50 + offset)
+        
+        # Velocidad diagonal arrastrada
+        self.vx = random.uniform(-4.0, -7.0)
+        self.vy = random.uniform(3.0, 5.0)
+        
+        self.size = random.uniform(5, 15)
+        self.color = QColor(255, 215, 0, random.randint(100, 200)) # Dorado
+        self.lifespan = 300
+        self.age = 0
+
+    def update(self):
+        self.position.setX(self.position.x() + self.vx)
+        self.position.setY(self.position.y() + self.vy)
+        self.age += 1
+        
+        if self.age > 200:
+            alpha = self.color.alpha()
+            if alpha > 2: self.color.setAlpha(alpha - 2)
+
+    def is_dead(self):
+        return self.age >= self.lifespan or self.position.x() < -100 or self.position.y() > self.max_h + 100
 
 
 class TypePlayerScreen(QWidget):
@@ -23,9 +55,19 @@ class TypePlayerScreen(QWidget):
         self.player1_name = "Jugador 1"
         self.player2_name = "Jugador 2"
         self._loaded_bots = {} # To store dynamically loaded bot configurations
+        self.background_color = QColor("#0C0E1D") # Fondo azul oscuro
+        self.setAutoFillBackground(True)
+        p = self.palette()
+        p.setColor(self.backgroundRole(), self.background_color)
+        self.setPalette(p)
+
+        # --- SISTEMA DE PARTÍCULAS ---
+        self.particles = []
+        self.particle_timer = QTimer(self)
+        self.particle_timer.timeout.connect(self.update_particles)
+        # No iniciar el timer aquí, se iniciará en showEvent
+        
         self.setup_ui()
-        self.setStyleSheet("background-color: #1a1a1a; color: white;")
-        self.setWindowFlags(Qt.FramelessWindowHint)
         
     def setup_ui(self):
         """Configura la interfaz de usuario"""
@@ -35,16 +77,16 @@ class TypePlayerScreen(QWidget):
         
         # Título
         title_label = QLabel("CONFIGURACIÓN DE JUGADORES")
-        title_label.setFont(QFont("Arial", 24, QFont.Bold))
+        title_label.setFont(QFont("Georgia", 40, QFont.Bold)) # Estilo elegante
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("color: #FFD700; padding: 20px;")
+        title_label.setStyleSheet("color: #FFD700; padding: 20px; background: transparent;")
         layout.addWidget(title_label)
         
         # Descripción
         desc_label = QLabel("Selecciona el tipo de jugador para cada posición:")
         desc_label.setFont(QFont("Arial", 12))
         desc_label.setAlignment(Qt.AlignCenter)
-        desc_label.setStyleSheet("padding: 10px; color: #CCCCCC;")
+        desc_label.setStyleSheet("padding: 10px; color: #CCCCCC; background: transparent;")
         layout.addWidget(desc_label)
         
         # Contenedor para la configuración de jugadores
@@ -57,6 +99,7 @@ class TypePlayerScreen(QWidget):
                 margin-top: 20px;
                 padding-top: 10px;
                 color: #FFD700;
+                background-color: rgba(0, 0, 0, 100); /* Fondo semi-transparente */
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
@@ -107,10 +150,10 @@ class TypePlayerScreen(QWidget):
             QComboBox {
                 background-color: #2a2a2a;
                 color: white;
-                border: 1px solid #555;
+                border: 1px solid #5;
                 border-radius: 5px;
                 padding: 8px;
-                min-width: 200px;
+                min-width: 20px;
             }
             QComboBox:hover {
                 border: 1px solid #FFD700;
@@ -290,6 +333,49 @@ class TypePlayerScreen(QWidget):
         # Configuración inicial
         self.update_ui()
     
+    def update_particles(self):
+        if len(self.particles) < 60:
+            self.particles.append(Particle(self.width(), self.height()))
+
+        for particle in list(self.particles):
+            particle.update()
+            if particle.is_dead():
+                self.particles.remove(particle)
+        self.update() # Llama al paintEvent
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # 1. Dibujar el fondo azul sólido
+        painter.fillRect(self.rect(), self.background_color)
+
+        # 2. Dibujar las partículas doradas
+        for p in self.particles:
+            gradient = QRadialGradient(p.position, p.size)
+            gradient.setColorAt(0, p.color)
+            gradient.setColorAt(1, QColor(255, 215, 0, 0)) # Desvanecimiento
+            
+            painter.setBrush(QBrush(gradient))
+            painter.setPen(Qt.NoPen)
+            painter.drawEllipse(p.position, p.size, p.size)
+        
+        super().paintEvent(event)
+
+    def showEvent(self, event):
+        """Se llama cuando el widget se muestra."""
+        super().showEvent(event)
+        if not self.particle_timer.isActive():
+            self.particle_timer.start(20)
+        self.update() # Asegurar un redibujado al mostrarse
+
+    def hideEvent(self, event):
+        """Se llama cuando el widget se oculta."""
+        super().hideEvent(event)
+        if self.particle_timer.isActive():
+            self.particle_timer.stop()
+
+
     def update_ui(self):
         """Actualiza la interfaz según las selecciones"""
         player1_type = self.player1_combo.currentText()
